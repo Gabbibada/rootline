@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Rootline",
+    "slug": "rootline",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "rootline",
+    "splash": { "backgroundColor": "#1C1008" },
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.gabbibada.rootline" },
+    "android": { "package": "com.gabbibada.rootline" },
+    "plugins": ["expo-router","expo-font","expo-splash-screen"],
+    "experiments": { "typedRoutes": true }
+  }
+}

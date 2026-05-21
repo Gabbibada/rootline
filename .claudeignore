@@ -1,0 +1,35 @@
+# .claudeignore — Claude Code will not read or modify these
+
+# Dependencies
+node_modules/
+.expo/
+dist/
+build/
+
+# Environment — never touch
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# Generated / compiled
+packages/engine/dist/
+packages/api/dist/
+
+# Binary assets
+assets/fonts/*.ttf
+assets/images/*.png
+assets/images/*.jpg
+
+# Native builds
+ios/
+android/
+
+# Lock files — never edit
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+npm-debug.log*
