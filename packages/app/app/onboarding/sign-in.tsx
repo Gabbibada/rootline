@@ -36,9 +36,7 @@ export default function SignInScreen() {
       if (userId) {
         const treeData = await loadUserTree(userId)
         if (treeData) {
-          const personIds = Object.keys(treeData.graph.people)
-          const currentUserId = personIds.length === 1 ? personIds[0] : null
-          loadGraph(treeData.graph, treeData.treeName, currentUserId)
+          loadGraph(treeData.graph, treeData.treeName, treeData.currentPersonId)
           router.replace('/(tabs)/')
           return
         }

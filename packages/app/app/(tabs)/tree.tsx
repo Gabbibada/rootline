@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Svg, { Circle, Line, Text as SvgText, G } from 'react-native-svg'
-import { buildAdjacency, FamilyGraph } from '@rootline/engine'
+import { buildAdjacency, FamilyGraph, createEngine } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { Colors, Typography, Spacing, Shadow, Radius } from '../../src/theme'
 
@@ -127,6 +127,18 @@ export default function TreeScreen() {
   const layout = useMemo(() => {
     if (!graph || !currentUserId || !graph.people[currentUserId]) return null
     return computeLayout(graph, currentUserId)
+  }, [graph, currentUserId])
+
+  // Relationship label for every node ("Your dad", "Your sister", …)
+  const labelMap = useMemo(() => {
+    if (!graph || !currentUserId) return new Map<string, string>()
+    const engine = createEngine(graph)
+    const map    = new Map<string, string>()
+    map.set(currentUserId, 'You')
+    for (const { personId, result } of engine.getAllRelationships(currentUserId)) {
+      if (result.found) map.set(personId, result.path.label)
+    }
+    return map
   }, [graph, currentUserId])
 
   // Fuzzy name search — top 5 matches
@@ -319,6 +331,18 @@ export default function TreeScreen() {
                   >
                     {isDeceased ? `${firstName} †` : firstName}
                   </SvgText>
+                  {labelMap.get(person.id) && (
+                    <SvgText
+                      x={pos.x} y={pos.y + NODE_R + 27}
+                      textAnchor="middle"
+                      fill={isMe ? Colors.amber : Colors.sand}
+                      fontSize={9}
+                      fontFamily="IBMPlexMono-Regular"
+                      opacity={isDeceased ? 0.35 : 0.55}
+                    >
+                      {labelMap.get(person.id)}
+                    </SvgText>
+                  )}
                 </G>
               )
             })}

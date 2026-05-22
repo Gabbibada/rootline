@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react'
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Image } from 'expo-image'
+import * as ImagePicker from 'expo-image-picker'
 import { Gender } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { signOut } from '../../src/lib/supabase'
-import { saveMember } from '../../src/lib/db'
+import { saveMember, uploadPhoto } from '../../src/lib/db'
 import {
   getNotificationPermissionStatus,
   scheduleAllBirthdayNotifications,
   cancelAllBirthdayNotifications,
 } from '../../src/lib/notifications'
+import { Avatar } from '../../src/components/Avatar'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
 
 const GENDERS: { label: string; value: Gender }[] = [
@@ -20,6 +23,16 @@ const GENDERS: { label: string; value: Gender }[] = [
   { label: 'Woman',      value: 'F'  },
   { label: 'Non-binary', value: 'NB' },
 ]
+
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return dateStr
+  const MONTHS = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December',
+  ]
+  return `${MONTHS[month - 1]} ${day}, ${year}`
+}
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -38,13 +51,15 @@ export default function ProfileScreen() {
   const [saving,      setSaving]      = useState(false)
   const [notifStatus, setNotifStatus] = useState<string | null>(null)
 
-  // Editable field state — initialised from me when edit mode opens
-  const [name,     setName]     = useState('')
-  const [birthday, setBirthday] = useState('')
-  const [gender,   setGender]   = useState<Gender>('M')
-  const [location, setLocation] = useState('')
-  const [story,    setStory]    = useState('')
-  const [error,    setError]    = useState('')
+  // Edit fields
+  const [name,       setName]       = useState('')
+  const [birthday,   setBirthday]   = useState('')
+  const [birthplace, setBirthplace] = useState('')
+  const [gender,     setGender]     = useState<Gender>('M')
+  const [location,   setLocation]   = useState('')
+  const [story,      setStory]      = useState('')
+  const [error,      setError]      = useState('')
+  const [editPhoto,  setEditPhoto]  = useState<string | null>(null)
 
   useEffect(() => {
     if (!editing) getNotificationPermissionStatus().then(s => setNotifStatus(s))
@@ -66,9 +81,11 @@ export default function ProfileScreen() {
     if (!me) return
     setName(me.name)
     setBirthday(me.birthday ?? '')
+    setBirthplace(me.birthplace ?? '')
     setGender(me.gender)
     setLocation(me.location ?? '')
     setStory(me.story ?? '')
+    setEditPhoto(null)
     setError('')
     setEditing(true)
   }
@@ -84,21 +101,45 @@ export default function ProfileScreen() {
     if (!me || !currentUserId) return
 
     setSaving(true)
+
+    let photoUrl = me.photo
+    if (editPhoto) {
+      const uploaded = await uploadPhoto(me.treeId, me.id, editPhoto)
+      if (uploaded) photoUrl = uploaded
+    }
+
     const updates = {
-      name:     name.trim(),
-      birthday: birthday || null,
+      name:       name.trim(),
+      birthday:   birthday || null,
+      birthplace: birthplace.trim() || null,
       gender,
-      location: location.trim() || null,
-      story:    story.trim() || null,
+      location:   location.trim() || null,
+      story:      story.trim() || null,
+      photo:      photoUrl,
     }
 
     updatePerson(currentUserId, updates)
-
-    // Best-effort Supabase save
     saveMember({ ...me, ...updates }).catch(() => undefined)
 
     setSaving(false)
     setEditing(false)
+  }
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library in Settings.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    })
+    if (!result.canceled && result.assets[0]) {
+      setEditPhoto(result.assets[0].uri)
+    }
   }
 
   const handleSignOut = () => {
@@ -108,17 +149,19 @@ export default function ProfileScreen() {
     ])
   }
 
-  const initial = me?.name.charAt(0).toUpperCase() ?? '?'
-
   // ── Read mode ──────────────────────────────────────────────────────────────
   if (!editing) {
     return (
       <SafeAreaView style={s.safe}>
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={s.heroSection}>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>{initial}</Text>
-            </View>
+            <Avatar
+              name={me?.name ?? '?'}
+              photo={me?.photo}
+              size={88}
+              amber
+              style={s.avatar}
+            />
             <Text style={s.name}>{me?.name ?? 'Your profile'}</Text>
             {treeName && <Text style={s.treeBadge}>{treeName}</Text>}
 
@@ -130,11 +173,12 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          {(me?.birthday || me?.gender || me?.location) && (
+          {(me?.birthday || me?.birthplace || me?.gender || me?.location) && (
             <View style={s.card}>
-              {me.birthday  && <InfoRow label="Birthday" value={me.birthday} />}
-              {me.gender    && <InfoRow label="Gender"   value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[me.gender]} />}
-              {me.location  && <InfoRow label="Location" value={me.location} />}
+              {me.birthday   && <InfoRow label="Born"       value={formatDate(me.birthday)} />}
+              {me.birthplace && <InfoRow label="Birthplace" value={me.birthplace} />}
+              {me.gender     && <InfoRow label="Gender"     value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[me.gender]} />}
+              {me.location   && <InfoRow label="Location"   value={me.location} />}
             </View>
           )}
 
@@ -147,22 +191,16 @@ export default function ProfileScreen() {
 
           <View style={s.card}>
             <View style={s.notifRow}>
-              <View>
+              <View style={s.notifInfo}>
                 <Text style={s.notifTitle}>Birthday reminders</Text>
-                <Text style={s.notifSub}>Notified 7, 3, and 0 days before</Text>
+                <Text style={s.notifSub}>7 days, 3 days, and on the day</Text>
               </View>
-              <Pressable
-                style={({ pressed }) => [
-                  s.notifBadge,
-                  notifStatus === 'granted' ? s.notifBadgeOn : s.notifBadgeOff,
-                  pressed && s.pressed,
-                ]}
-                onPress={toggleNotifications}
-              >
-                <Text style={[s.notifBadgeText, notifStatus === 'granted' && s.notifBadgeTextOn]}>
-                  {notifStatus === 'granted' ? 'On' : 'Off'}
-                </Text>
-              </Pressable>
+              <Switch
+                value={notifStatus === 'granted'}
+                onValueChange={toggleNotifications}
+                trackColor={{ false: Colors.border, true: Colors.amber }}
+                thumbColor={Colors.cream}
+              />
             </View>
           </View>
 
@@ -194,9 +232,22 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          <View style={s.avatarSmall}>
-            <Text style={s.avatarText}>{initial}</Text>
-          </View>
+          {/* Photo picker */}
+          <Pressable style={s.avatarWrap} onPress={pickPhoto}>
+            {editPhoto ? (
+              <Image
+                source={{ uri: editPhoto }}
+                style={s.avatarImg}
+                contentFit="cover"
+                transition={150}
+              />
+            ) : (
+              <Avatar name={me?.name ?? '?'} photo={me?.photo} size={72} amber style={s.avatarImg} />
+            )}
+            <View style={s.photoBadge}>
+              <Text style={s.photoBadgeText}>Edit</Text>
+            </View>
+          </Pressable>
 
           <View style={s.field}>
             <Text style={s.label}>Full name</Text>
@@ -220,6 +271,18 @@ export default function ProfileScreen() {
               placeholderTextColor={Colors.textMuted}
               keyboardType="numeric"
               maxLength={10}
+            />
+          </View>
+
+          <View style={s.field}>
+            <Text style={s.label}>Birthplace <Text style={s.optional}>(optional)</Text></Text>
+            <TextInput
+              style={s.input}
+              value={birthplace}
+              onChangeText={setBirthplace}
+              placeholder="e.g. Accra, Ghana"
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="words"
             />
           </View>
 
@@ -287,8 +350,7 @@ const s = StyleSheet.create({
 
   // Read mode — hero
   heroSection:    { alignItems: 'center', paddingTop: Spacing.xxxl, paddingBottom: Spacing.xxl },
-  avatar:         { width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.bark, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
-  avatarText:     { ...Typography.display, color: Colors.sand, fontSize: 36 },
+  avatar:         { marginBottom: Spacing.lg },
   name:           { ...Typography.heading1, color: Colors.textDark, textAlign: 'center' },
   treeBadge:      { ...Typography.bodySmall, color: Colors.textMuted, marginTop: Spacing.xs },
   editBtn:        { marginTop: Spacing.lg, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.full },
@@ -302,12 +364,23 @@ const s = StyleSheet.create({
   storyLabel:     { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing.sm },
   storyText:      { ...Typography.body, color: Colors.textDark, lineHeight: 24 },
 
+  // Notifications
+  notifRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  notifInfo:      { flex: 1, marginRight: Spacing.md },
+  notifTitle:     { ...Typography.label, color: Colors.textDark, marginBottom: 2 },
+  notifSub:       { ...Typography.bodySmall, color: Colors.textMuted },
+
   // Edit mode
   editHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Spacing.xl, paddingBottom: Spacing.xxl },
   cancelText:     { ...Typography.body, color: Colors.textMid },
   editTitle:      { ...Typography.nameTag, color: Colors.textDark },
   saveText:       { ...Typography.label, color: Colors.amber, fontSize: 15 },
-  avatarSmall:    { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.bark, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: Spacing.xxl },
+
+  avatarWrap:     { alignSelf: 'center', marginBottom: Spacing.xxl, position: 'relative' },
+  avatarImg:      { width: 72, height: 72, borderRadius: 36 },
+  photoBadge:     { position: 'absolute', bottom: 0, right: 0, backgroundColor: Colors.amber, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  photoBadgeText: { fontFamily: 'DMSans-Medium', fontSize: 9, color: Colors.cream, letterSpacing: 0.4 },
+
   field:          { marginBottom: Spacing.lg },
   label:          { ...Typography.label, color: Colors.textMid, marginBottom: Spacing.xs },
   optional:       { ...Typography.label, color: Colors.textMuted, fontWeight: '400' },
@@ -319,16 +392,6 @@ const s = StyleSheet.create({
   chipText:       { ...Typography.label, color: Colors.textMid },
   chipTextActive: { color: Colors.cream },
   error:          { ...Typography.bodySmall, color: Colors.error, marginBottom: Spacing.md },
-
-  // Notifications card
-  notifRow:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  notifTitle:         { ...Typography.label, color: Colors.textDark, marginBottom: 2 },
-  notifSub:           { ...Typography.bodySmall, color: Colors.textMuted },
-  notifBadge:         { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
-  notifBadgeOn:       { backgroundColor: Colors.amber, borderColor: Colors.amber },
-  notifBadgeOff:      { backgroundColor: Colors.cream2 },
-  notifBadgeText:     { ...Typography.label, color: Colors.textMid, fontSize: 12 },
-  notifBadgeTextOn:   { color: Colors.cream },
 
   // Shared
   pressed:        { opacity: 0.7 },

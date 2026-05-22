@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Pla
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../src/lib/supabase'
-import { createTree, saveMember } from '../../src/lib/db'
+import { createTree, saveMember, claimMember } from '../../src/lib/db'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { Gender, Person } from '@rootline/engine'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
@@ -61,6 +61,8 @@ export default function TreeScreen() {
 
       // Best-effort Supabase save — not blocking
       saveMember(person).catch(() => undefined)
+      // Link the auth user to their member row so loadUserTree can find them on future sign-ins
+      if (user) claimMember(personId, user.id).catch(() => undefined)
 
       router.replace('/(tabs)/')
     } catch {

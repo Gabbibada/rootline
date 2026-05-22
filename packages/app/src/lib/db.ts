@@ -48,19 +48,53 @@ export async function saveRelationship(rel: Relationship): Promise<void> {
 }
 
 export async function loadUserTree(
-  ownerId: string,
-): Promise<{ treeId: string; treeName: string; graph: FamilyGraph } | null> {
-  const { data, error } = await supabase
+  userId: string,
+): Promise<{ treeId: string; treeName: string; graph: FamilyGraph; currentPersonId: string | null } | null> {
+
+  // ── 1. Tree owned by this user ────────────────────────────────────────────
+  const { data: owned } = await supabase
     .from('trees')
     .select('id, name')
-    .eq('owner_id', ownerId)
+    .eq('owner_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
-  if (error || !data) return null
-  const graph = await loadTree(data.id as string)
-  if (!graph) return null
-  return { treeId: data.id as string, treeName: data.name as string, graph }
+
+  if (owned) {
+    const graph = await loadTree(owned.id as string)
+    if (!graph) return null
+    // Find which member in this tree the user owns (user_id set during onboarding)
+    const { data: mine } = await supabase
+      .from('members')
+      .select('id')
+      .eq('tree_id', owned.id)
+      .eq('user_id', userId)
+      .single()
+    return {
+      treeId:          owned.id   as string,
+      treeName:        owned.name as string,
+      graph,
+      currentPersonId: mine ? (mine.id as string) : null,
+    }
+  }
+
+  // ── 2. User has a claimed member in someone else's tree ───────────────────
+  const { data: claimed } = await supabase
+    .from('members')
+    .select('id, tree_id, trees(name)')
+    .eq('user_id', userId)
+    .limit(1)
+    .single()
+
+  if (claimed) {
+    const treeId   = claimed.tree_id as string
+    const treeName = ((claimed as any).trees?.name as string | undefined) ?? 'Family Tree'
+    const graph    = await loadTree(treeId)
+    if (!graph) return null
+    return { treeId, treeName, graph, currentPersonId: claimed.id as string }
+  }
+
+  return null
 }
 
 export async function deleteMember(personId: string): Promise<void> {
