@@ -214,7 +214,7 @@ export default function RelateScreen() {
             ) : (
               <Text style={s.noResultText}>
                 {result.reason === 'same_person'
-                  ? 'That's the same person!'
+                  ? "That's the same person!"
                   : 'No connection found in this tree.'}
               </Text>
             )}

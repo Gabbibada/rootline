@@ -7,11 +7,7 @@
     "userInterfaceStyle": "light",
     "scheme": "rootline",
 
-    "icon": "./assets/icon.png",
-
     "splash": {
-      "image":           "./assets/splash.png",
-      "resizeMode":      "contain",
       "backgroundColor": "#1C1008"
     },
 
@@ -22,12 +18,8 @@
     "android": {
       "package":          "com.gabbibada.rootline",
       "adaptiveIcon": {
-        "foregroundImage":  "./assets/icon.png",
         "backgroundColor":  "#1C1008"
       }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
 
     "plugins": [
