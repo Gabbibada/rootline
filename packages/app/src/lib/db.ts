@@ -23,6 +23,7 @@ export async function saveMember(person: Person): Promise<void> {
     death_date: person.deathDate,
     photo:      person.photo,
     location:   person.location,
+    occupation: (person as any).occupation ?? null,
     story:      person.story,
     deceased:   person.deceased,
   })

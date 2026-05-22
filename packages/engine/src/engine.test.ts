@@ -3,7 +3,7 @@ import { buildAdjacency, getSiblings, getParents, getChildren } from './graph'
 
 function makePerson(id: string, name: string, gender: 'M'|'F'|'NB', nickname?: string) {
   return { id, name, nickname: nickname ?? null, gender, birthday: null, birthplace: null,
-           deathDate: null, photo: null, location: null, story: null, treeId: 'bada-tree', deceased: false }
+           deathDate: null, photo: null, location: null, occupation: null, story: null, treeId: 'bada-tree', deceased: false }
 }
 function makeParent(from: string, to: string) {
   return { id: `${from}->${to}`, from, to, type: 'parent' as const, subtype: 'biological' as const, treeId: 'bada-tree' }

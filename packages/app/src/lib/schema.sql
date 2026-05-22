@@ -258,6 +258,68 @@ as $$
 $$;
 
 
+-- ── Migration: occupation ─────────────────────────────────────────────────────
+-- Run in Supabase SQL Editor (safe to re-run).
+
+alter table members
+  add column if not exists occupation text;
+
+-- Rebuild the RPC to include occupation in the returned JSON.
+create or replace function get_tree_graph(tree_id uuid)
+returns json
+language sql
+security definer
+stable
+as $$
+  select json_build_object(
+    'people',
+    coalesce(
+      (
+        select json_object_agg(
+          m.id,
+          json_build_object(
+            'id',         m.id,
+            'name',       m.name,
+            'nickname',   m.nickname,
+            'gender',     m.gender,
+            'birthday',   m.birthday,
+            'birthplace', m.birthplace,
+            'deathDate',  m.death_date,
+            'photo',      m.photo,
+            'location',   m.location,
+            'occupation', m.occupation,
+            'story',      m.story,
+            'treeId',     m.tree_id,
+            'deceased',   m.deceased
+          )
+        )
+        from members m
+        where m.tree_id = get_tree_graph.tree_id
+      ),
+      '{}'::json
+    ),
+    'relationships',
+    coalesce(
+      (
+        select json_agg(
+          json_build_object(
+            'id',      r.id,
+            'from',    r.from_id,
+            'to',      r.to_id,
+            'type',    r.type,
+            'subtype', r.subtype,
+            'treeId',  r.tree_id
+          )
+        )
+        from relationships r
+        where r.tree_id = get_tree_graph.tree_id
+      ),
+      '[]'::json
+    )
+  );
+$$;
+
+
 -- ── Storage: photos bucket ────────────────────────────────────────────────────
 
 insert into storage.buckets (id, name, public)

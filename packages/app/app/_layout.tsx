@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen'
 import { useFonts } from 'expo-font'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { ErrorBoundary } from '../src/components/ErrorBoundary'
+import { OfflineBanner } from '../src/components/OfflineBanner'
 import { CormorantGaramond_500Medium } from '@expo-google-fonts/cormorant-garamond'
 import { DMSans_400Regular, DMSans_500Medium } from '@expo-google-fonts/dm-sans'
 import { IBMPlexMono_400Regular } from '@expo-google-fonts/ibm-plex-mono'
@@ -93,8 +95,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }} />
+        <ErrorBoundary>
+          <StatusBar style="light" />
+          <OfflineBanner />
+          <Stack screenOptions={{ headerShown: false }} />
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )

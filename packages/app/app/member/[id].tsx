@@ -86,7 +86,7 @@ function PathExplainer({ path, people }: { path: RelationshipPath; people: Recor
 export default function MemberScreen() {
   const { id }  = useLocalSearchParams<{ id: string }>()
   const router  = useRouter()
-  const { graph, currentUserId, updatePerson, removePerson } = useFamilyStore()
+  const { graph, currentUserId, updatePerson, removePerson, logActivity } = useFamilyStore()
   const member  = id ? graph?.people[id] : null
   const rel     = useRelationship(graph ?? null, currentUserId ?? null, id ?? null)
   const isMe    = id === currentUserId
@@ -97,11 +97,13 @@ export default function MemberScreen() {
 
   // Edit fields
   const [name,       setName]       = useState('')
+  const [nickname,   setNickname]   = useState('')
   const [birthday,   setBirthday]   = useState('')
   const [birthplace, setBirthplace] = useState('')
   const [deathDate,  setDeathDate]  = useState('')
   const [gender,     setGender]     = useState<Gender>('M')
   const [location,   setLocation]   = useState('')
+  const [occupation, setOccupation] = useState('')
   const [story,      setStory]      = useState('')
   const [error,      setError]      = useState('')
   const [deceased,   setDeceased]   = useState(false)
@@ -125,11 +127,13 @@ export default function MemberScreen() {
 
   const startEditing = () => {
     setName(member.name)
+    setNickname(member.nickname ?? '')
     setBirthday(member.birthday ?? '')
     setBirthplace(member.birthplace ?? '')
     setDeathDate(member.deathDate ?? '')
     setGender(member.gender)
     setLocation(member.location ?? '')
+    setOccupation((member as any).occupation ?? '')
     setStory(member.story ?? '')
     setDeceased(member.deceased)
     setEditPhoto(null)
@@ -159,17 +163,20 @@ export default function MemberScreen() {
 
     const updates = {
       name:       name.trim(),
+      nickname:   nickname.trim() || null,
       birthday:   birthday || null,
       birthplace: birthplace.trim() || null,
       deathDate:  deathDate.trim() || null,
       gender,
       location:   location.trim() || null,
+      occupation: occupation.trim() || null,
       story:      story.trim() || null,
       deceased,
       photo:      photoUrl,
     }
     updatePerson(id!, updates)
     saveMember({ ...member, ...updates }).catch(() => undefined)
+    logActivity('updated', { id: id!, name: name.trim() })
     setSaving(false)
     setEditing(false)
   }
@@ -262,6 +269,18 @@ export default function MemberScreen() {
             </View>
 
             <View style={s.field}>
+              <Text style={s.label}>Nickname <Text style={s.optional}>(optional)</Text></Text>
+              <TextInput
+                style={s.input}
+                value={nickname}
+                onChangeText={setNickname}
+                placeholder="e.g. Nan, Big Dave"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={s.field}>
               <Text style={s.label}>Birthday <Text style={s.optional}>(optional)</Text></Text>
               <TextInput
                 style={s.input}
@@ -310,6 +329,18 @@ export default function MemberScreen() {
                 value={location}
                 onChangeText={setLocation}
                 placeholder="e.g. Lagos, Nigeria"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={s.field}>
+              <Text style={s.label}>Occupation <Text style={s.optional}>(optional)</Text></Text>
+              <TextInput
+                style={s.input}
+                value={occupation}
+                onChangeText={setOccupation}
+                placeholder="e.g. Teacher, Engineer"
                 placeholderTextColor={Colors.textMuted}
                 autoCapitalize="words"
               />
@@ -389,6 +420,7 @@ export default function MemberScreen() {
         <View style={s.hero}>
           <Avatar name={member.name} photo={member.photo} size={88} style={s.avatar} amber={isMe} />
           <Text style={s.name}>{member.name}</Text>
+          {member.nickname && <Text style={s.nickname}>"{member.nickname}"</Text>}
           {relationLabel && <Text style={s.relation}>{relationLabel}</Text>}
           {member.deceased && <Text style={s.deceasedTag}>† Deceased</Text>}
         </View>
@@ -400,7 +432,7 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {(member.birthday || member.birthplace || member.deathDate || member.gender || member.location) && (
+        {(member.birthday || member.birthplace || member.deathDate || member.gender || member.location || (member as any).occupation) && (
           <View style={s.card}>
             {member.birthday && (
               <InfoRow label="Born" value={formatDate(member.birthday)} />
@@ -416,6 +448,9 @@ export default function MemberScreen() {
             )}
             {member.location && (
               <InfoRow label="Location" value={member.location} />
+            )}
+            {(member as any).occupation && (
+              <InfoRow label="Occupation" value={(member as any).occupation} />
             )}
           </View>
         )}
@@ -471,6 +506,7 @@ const s = StyleSheet.create({
   avatar:       { marginBottom: Spacing.lg },
   avatarText:   { ...Typography.display, color: Colors.sand, fontSize: 36 },
   name:         { ...Typography.heading1, color: Colors.textDark, textAlign: 'center' },
+  nickname:     { ...Typography.body, color: Colors.textMuted, fontStyle: 'italic', marginTop: 2 },
   relation:     { ...Typography.body, color: Colors.amber, marginTop: Spacing.xs },
 
   // Info card

@@ -8,6 +8,16 @@ import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { Avatar } from '../../src/components/Avatar'
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/theme'
 
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1)  return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getDaysUntilBirthday(birthday: string): number {
@@ -54,13 +64,13 @@ function computeGenerationSpan(graph: ReturnType<typeof useFamilyStore>['graph']
 export default function HomeScreen() {
   const router = useRouter()
   const [modalVisible, setModalVisible] = useState(false)
-  const { graph, currentUserId, treeName } = useFamilyStore()
+  const { graph, currentUserId, treeName, activityLog } = useFamilyStore()
   const me        = currentUserId ? graph?.people[currentUserId] : null
   const firstName = me?.name.split(' ')[0] ?? 'there'
 
-  const { todaysBirthdays, upcomingBirthdays, familyMembers, stats } = useMemo(() => {
+  const { todaysBirthdays, upcomingBirthdays, familyMembers, stats, missingBirthday } = useMemo(() => {
     if (!graph || !currentUserId) {
-      return { todaysBirthdays: [], upcomingBirthdays: [], familyMembers: [], stats: null }
+      return { todaysBirthdays: [], upcomingBirthdays: [], familyMembers: [], stats: null, missingBirthday: 0 }
     }
     const engine  = createEngine(graph)
     const allRels = engine.getAllRelationships(currentUserId)
@@ -98,10 +108,15 @@ export default function HomeScreen() {
       oldestYear:  oldestPerson?.birthday?.slice(0, 4) ?? null,
     } : null
 
-    return { todaysBirthdays, upcomingBirthdays, familyMembers, stats }
+    // Missing birthday count (excluding self)
+    const missingBirthday = Object.values(graph.people)
+      .filter(p => p.id !== currentUserId && !p.birthday).length
+
+    return { todaysBirthdays, upcomingBirthdays, familyMembers, stats, missingBirthday }
   }, [graph, currentUserId])
 
   const otherCount = Math.max(0, Object.keys(graph?.people ?? {}).length - 1)
+  const recentActivity = activityLog.slice(0, 5)
 
   return (
     <SafeAreaView style={s.safe}>
@@ -223,6 +238,44 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* ── Missing birthday nudge ── */}
+        {missingBirthday > 0 && (
+          <Pressable
+            style={({ pressed }) => [s.nudge, pressed && s.nudgePressed]}
+            onPress={() => router.push('/(tabs)/family')}
+          >
+            <Text style={s.nudgeText}>
+              🎂  {missingBirthday} member{missingBirthday > 1 ? 's' : ''} missing a birthday — tap to fill in
+            </Text>
+          </Pressable>
+        )}
+
+        {/* ── Recent activity ── */}
+        {recentActivity.length > 0 && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Recent activity</Text>
+            </View>
+            <View style={s.card}>
+              {recentActivity.map((entry, i) => (
+                <View
+                  key={entry.id}
+                  style={[s.actRow, i < recentActivity.length - 1 && s.rowBorder]}
+                >
+                  <View style={s.actDot} />
+                  <View style={s.actInfo}>
+                    <Text style={s.actName}>{entry.personName}</Text>
+                    <Text style={s.actDesc}>
+                      {entry.type === 'added' ? 'added to tree' : entry.type === 'updated' ? 'profile updated' : 'removed'}
+                    </Text>
+                  </View>
+                  <Text style={s.actTime}>{timeAgo(entry.timestamp)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* ── Add members CTA ── */}
         <Pressable
           style={({ pressed }) => [s.addSection, pressed && s.addSectionPressed]}
@@ -291,6 +344,21 @@ const s = StyleSheet.create({
   statCardWide:   { width: '100%' },
   statNumber:     { ...Typography.heading1, color: Colors.textDark, lineHeight: 32 },
   statLabel:      { ...Typography.caption, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
+
+  // Nudge
+  nudge:          { backgroundColor: Colors.bark, borderRadius: Radius.md, padding: Spacing.md,
+                    marginBottom: Spacing.xl },
+  nudgePressed:   { opacity: 0.8 },
+  nudgeText:      { ...Typography.bodySmall, color: Colors.sand, lineHeight: 20 },
+
+  // Activity feed
+  actRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md,
+                    paddingHorizontal: Spacing.lg, gap: Spacing.md },
+  actDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.amber, flexShrink: 0 },
+  actInfo:        { flex: 1 },
+  actName:        { fontFamily: 'DMSans-Medium', fontSize: 14, color: Colors.textDark },
+  actDesc:        { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
+  actTime:        { ...Typography.mono, fontSize: 10, color: Colors.textMuted },
 
   addSection:         { backgroundColor: Colors.cream2, borderRadius: Radius.lg, padding: Spacing.xl },
   addSectionPressed:  { opacity: 0.8 },

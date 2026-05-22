@@ -13,6 +13,7 @@ export interface Person {
   deathDate:  string | null   // YYYY-MM-DD
   photo:      string | null
   location:   string | null
+  occupation: string | null
   story:      string | null
   treeId:     string
   deceased:   boolean
