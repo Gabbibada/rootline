@@ -16,6 +16,7 @@
       "expo-notifications",
       ["expo-image-picker", { "photosPermission": "Allow Rootline to access your photos to set profile pictures." }]
     ],
+    "sdkVersion": "54.0.0",
     "experiments": { "typedRoutes": true }
   }
 }
