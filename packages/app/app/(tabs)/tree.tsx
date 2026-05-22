@@ -118,11 +118,16 @@ export default function TreeScreen() {
 
   // Pan/zoom using React Native's built-in Animated + PanResponder
   // (no reanimated needed — compatible with Expo Go)
-  const pan    = useRef(new Animated.ValueXY()).current
-  const scale  = useRef(new Animated.Value(1)).current
+  const pan          = useRef(new Animated.ValueXY()).current
+  const scale        = useRef(new Animated.Value(1)).current
   const offsetX      = useRef(0)
   const offsetY      = useRef(0)
   const currentScale = useRef(1)
+
+  // Pinch tracking
+  const isPinching      = useRef(false)
+  const pinchStartDist  = useRef(1)
+  const pinchStartScale = useRef(1)
 
   const layout = useMemo(() => {
     if (!graph || !currentUserId || !graph.people[currentUserId]) return null
@@ -183,23 +188,51 @@ export default function TreeScreen() {
 
   const panResponder = useRef(
     PanResponder.create({
-      // Don't claim touch on finger-down — lets SVG onPress fire for taps
+      // Don't claim on finger-down — lets SVG onPress fire for taps
       onStartShouldSetPanResponder: () => false,
-      // Claim only when a clear drag is detected
-      onMoveShouldSetPanResponder:  (_, gs) =>
+      // Claim on 2-finger touch (pinch) or clear 1-finger drag
+      onMoveShouldSetPanResponder: (evt, gs) =>
+        evt.nativeEvent.touches.length === 2 ||
         Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
-      onPanResponderGrant: () => {
-        pan.setOffset({ x: offsetX.current, y: offsetY.current })
-        pan.setValue({ x: 0, y: 0 })
+
+      onPanResponderGrant: (evt) => {
+        const t = evt.nativeEvent.touches
+        if (t.length >= 2) {
+          isPinching.current = true
+          const dx = t[0].pageX - t[1].pageX
+          const dy = t[0].pageY - t[1].pageY
+          pinchStartDist.current  = Math.sqrt(dx * dx + dy * dy) || 1
+          pinchStartScale.current = currentScale.current
+        } else {
+          isPinching.current = false
+          pan.setOffset({ x: offsetX.current, y: offsetY.current })
+          pan.setValue({ x: 0, y: 0 })
+        }
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false },
-      ),
+
+      onPanResponderMove: (evt, gs) => {
+        if (isPinching.current) {
+          const t = evt.nativeEvent.touches
+          if (t.length < 2) return
+          const dx   = t[0].pageX - t[1].pageX
+          const dy   = t[0].pageY - t[1].pageY
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          const next = Math.max(0.25, Math.min(4,
+            pinchStartScale.current * dist / pinchStartDist.current))
+          currentScale.current = next
+          scale.setValue(next)
+        } else {
+          pan.setValue({ x: gs.dx, y: gs.dy })
+        }
+      },
+
       onPanResponderRelease: (_, gs) => {
-        offsetX.current += gs.dx
-        offsetY.current += gs.dy
-        pan.flattenOffset()
+        if (!isPinching.current) {
+          offsetX.current += gs.dx
+          offsetY.current += gs.dy
+          pan.flattenOffset()
+        }
+        isPinching.current = false
       },
     })
   ).current
