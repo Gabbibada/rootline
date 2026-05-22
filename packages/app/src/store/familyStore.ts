@@ -10,8 +10,10 @@ interface FamilyState {
   treeName: string | null
   setGraph: (graph: FamilyGraph) => void
   initGraph: (person: Person, treeName: string) => void
+  loadGraph: (graph: FamilyGraph, treeName: string, currentUserId: string | null) => void
   addPerson: (person: Person) => void
   updatePerson: (id: string, updates: Partial<Person>) => void
+  removePerson: (id: string) => void
   addRelationship: (rel: Relationship) => void
   removeRelationship: (relId: string) => void
   setCurrentUser: (id: string) => void
@@ -23,13 +25,29 @@ interface FamilyState {
 export const useFamilyStore = create<FamilyState>()(
   persist(
     (set, get) => ({
-      graph: null, currentUserId: null, selectedMemberId: null,
+      graph: null, currentUserId: null, selectedMemberId: null, treeName: null,
       setGraph: (graph) => set({ graph }),
+      loadGraph: (graph, treeName, currentUserId) => set({ graph, treeName, currentUserId }),
+      initGraph: (person, treeName) => set({
+        graph: { people: { [person.id]: person }, relationships: [] },
+        currentUserId: person.id,
+        treeName,
+      }),
       addPerson: (person) => set((s) => !s.graph ? s : {
         graph: { ...s.graph, people: { ...s.graph.people, [person.id]: person } }
       }),
       updatePerson: (id, updates) => set((s) => !s.graph?.people[id] ? s : {
         graph: { ...s.graph, people: { ...s.graph.people, [id]: { ...s.graph.people[id], ...updates } } }
+      }),
+      removePerson: (id) => set((s) => {
+        if (!s.graph) return s
+        const { [id]: _removed, ...remaining } = s.graph.people
+        return {
+          graph: {
+            people: remaining,
+            relationships: s.graph.relationships.filter(r => r.from !== id && r.to !== id),
+          },
+        }
       }),
       addRelationship: (rel) => set((s) => {
         if (!s.graph || s.graph.relationships.some(r => r.id === rel.id)) return s
@@ -46,7 +64,7 @@ export const useFamilyStore = create<FamilyState>()(
     {
       name: 'rootline-family',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ graph: s.graph, currentUserId: s.currentUserId }),
+      partialize: (s) => ({ graph: s.graph, currentUserId: s.currentUserId, treeName: s.treeName }),
     }
   )
 )
