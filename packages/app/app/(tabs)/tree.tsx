@@ -1,14 +1,14 @@
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, useWindowDimensions,
-  Animated, PanResponder, Pressable,
+  Animated, PanResponder, Pressable, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Svg, { Circle, Line, Text as SvgText, G } from 'react-native-svg'
 import { buildAdjacency, FamilyGraph } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
-import { Colors, Typography, Spacing, Shadow } from '../../src/theme'
+import { Colors, Typography, Spacing, Shadow, Radius } from '../../src/theme'
 
 // ── Layout constants ─────────────────────────────────────────────────────────
 const NODE_R      = 26
@@ -112,6 +112,10 @@ export default function TreeScreen() {
   const { graph, currentUserId } = useFamilyStore()
   const { width: sw, height: sh } = useWindowDimensions()
 
+  // Search
+  const [searchOpen,  setSearchOpen]  = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
   // Pan/zoom using React Native's built-in Animated + PanResponder
   // (no reanimated needed — compatible with Expo Go)
   const pan    = useRef(new Animated.ValueXY()).current
@@ -124,6 +128,35 @@ export default function TreeScreen() {
     if (!graph || !currentUserId || !graph.people[currentUserId]) return null
     return computeLayout(graph, currentUserId)
   }, [graph, currentUserId])
+
+  // Fuzzy name search — top 5 matches
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q || !graph) return []
+    return Object.values(graph.people)
+      .filter(p => p.name.toLowerCase().includes(q))
+      .slice(0, 5)
+  }, [searchQuery, graph])
+
+  // Animate viewport to centre on a given node
+  const snapToNode = (personId: string) => {
+    const pos = layout?.get(personId)
+    if (!pos) return
+    const s    = currentScale.current
+    const newX = sw / 2 - CANVAS / 2 - (pos.x - CANVAS / 2) * s
+    const newY = (sh - HEADER_H) / 2 - CANVAS / 2 - (pos.y - CANVAS / 2) * s
+    offsetX.current = newX
+    offsetY.current = newY
+    pan.flattenOffset()
+    Animated.spring(pan, {
+      toValue: { x: newX, y: newY },
+      useNativeDriver: false,
+      speed: 14,
+      bounciness: 0,
+    }).start()
+    setSearchOpen(false)
+    setSearchQuery('')
+  }
 
   // Centre viewport on the current user when layout first appears
   useEffect(() => {
@@ -294,6 +327,65 @@ export default function TreeScreen() {
         </Animated.View>
       </View>
 
+      {/* Search overlay */}
+      {layout && (
+        <View style={s.searchContainer} pointerEvents="box-none">
+          {searchOpen ? (
+            <View style={s.searchPanel}>
+              <View style={s.searchRow}>
+                <TextInput
+                  style={s.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search family…"
+                  placeholderTextColor={Colors.sand}
+                  autoFocus
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                />
+                <Pressable
+                  style={s.searchClose}
+                  onPress={() => { setSearchOpen(false); setSearchQuery('') }}
+                  hitSlop={8}
+                >
+                  <Text style={s.searchCloseText}>✕</Text>
+                </Pressable>
+              </View>
+              {searchResults.length > 0 && (
+                <View style={s.searchResults}>
+                  {searchResults.map((person, i) => (
+                    <Pressable
+                      key={person.id}
+                      style={({ pressed }) => [
+                        s.searchResultRow,
+                        i < searchResults.length - 1 && s.searchResultBorder,
+                        pressed && s.searchResultPressed,
+                      ]}
+                      onPress={() => snapToNode(person.id)}
+                    >
+                      <Text style={s.searchResultName}>{person.name}</Text>
+                      {person.birthday && (
+                        <Text style={s.searchResultYear}>{person.birthday.slice(0, 4)}</Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+              {searchQuery.trim().length > 0 && searchResults.length === 0 && (
+                <View style={s.searchResults}>
+                  <Text style={s.searchNoResults}>No match found</Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <Pressable style={s.searchBtn} onPress={() => setSearchOpen(true)}>
+              <Text style={s.searchBtnText}>⌕</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
       {/* Zoom controls */}
       <View style={s.zoomControls}>
         <Pressable style={s.zoomBtn} onPress={() => zoom(1)}>
@@ -331,6 +423,23 @@ const s = StyleSheet.create({
   emptyText:      { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
   canvas:         { flex: 1, overflow: 'hidden' },
   svgWrap:        { position: 'absolute', left: 0, top: 0 },
+
+  // Search
+  searchContainer:      { position: 'absolute', top: HEADER_H + Spacing.md, left: Spacing.xl, right: Spacing.xl },
+  searchBtn:            { alignSelf: 'flex-end', width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.bark2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bark3, ...Shadow.card },
+  searchBtnText:        { fontFamily: 'DMSans-Regular', fontSize: 20, color: Colors.sand, lineHeight: 26 },
+  searchPanel:          { backgroundColor: Colors.bark2, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.bark3, overflow: 'hidden', ...Shadow.strong },
+  searchRow:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
+  searchInput:          { flex: 1, height: 44, fontFamily: 'DMSans-Regular', fontSize: 15, color: Colors.sand },
+  searchClose:          { paddingHorizontal: Spacing.xs },
+  searchCloseText:      { fontFamily: 'DMSans-Regular', fontSize: 14, color: Colors.textMuted },
+  searchResults:        { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.bark3 },
+  searchResultRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  searchResultBorder:   { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.bark3 },
+  searchResultPressed:  { backgroundColor: Colors.bark3 },
+  searchResultName:     { fontFamily: 'DMSans-Regular', fontSize: 15, color: Colors.sand },
+  searchResultYear:     { fontFamily: 'IBMPlexMono-Regular', fontSize: 10, color: Colors.textMuted, letterSpacing: 0.8 },
+  searchNoResults:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontFamily: 'DMSans-Regular', fontSize: 13, color: Colors.textMuted },
 
   // Zoom controls
   zoomControls:   { position: 'absolute', bottom: 120, right: Spacing.xl, gap: Spacing.xs },

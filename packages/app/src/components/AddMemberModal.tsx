@@ -83,16 +83,18 @@ export function AddMemberModal({ visible, onClose, pivotId }: AddMemberModalProp
 
     const personId = uid()
     const newPerson: Person = {
-      id:       personId,
-      name:     name.trim(),
-      nickname: null,
+      id:         personId,
+      name:       name.trim(),
+      nickname:   null,
       gender,
-      birthday: birthday || null,
-      photo:    null,
-      location: null,
-      story:    null,
-      treeId:   me.treeId,
-      deceased: false,
+      birthday:   birthday || null,
+      birthplace: null,
+      deathDate:  null,
+      photo:      null,
+      location:   null,
+      story:      null,
+      treeId:     me.treeId,
+      deceased:   false,
     }
 
     // parent edge: from = parent, to = child

@@ -31,6 +31,16 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return dateStr
+  const MONTHS = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December',
+  ]
+  return `${MONTHS[month - 1]} ${day}, ${year}`
+}
+
 function stepLabel(dir: Direction): string {
   if (dir === 'up')    return 'parent'
   if (dir === 'down')  return 'child'
@@ -86,14 +96,16 @@ export default function MemberScreen() {
   const [addVisible,  setAddVisible]  = useState(false)
 
   // Edit fields
-  const [name,     setName]     = useState('')
-  const [birthday, setBirthday] = useState('')
-  const [gender,   setGender]   = useState<Gender>('M')
-  const [location, setLocation] = useState('')
-  const [story,    setStory]    = useState('')
-  const [error,     setError]     = useState('')
-  const [deceased,  setDeceased]  = useState(false)
-  const [editPhoto, setEditPhoto] = useState<string | null>(null)   // local URI during edit
+  const [name,       setName]       = useState('')
+  const [birthday,   setBirthday]   = useState('')
+  const [birthplace, setBirthplace] = useState('')
+  const [deathDate,  setDeathDate]  = useState('')
+  const [gender,     setGender]     = useState<Gender>('M')
+  const [location,   setLocation]   = useState('')
+  const [story,      setStory]      = useState('')
+  const [error,      setError]      = useState('')
+  const [deceased,   setDeceased]   = useState(false)
+  const [editPhoto,  setEditPhoto]  = useState<string | null>(null)   // local URI during edit
 
   if (!member) {
     return (
@@ -114,6 +126,8 @@ export default function MemberScreen() {
   const startEditing = () => {
     setName(member.name)
     setBirthday(member.birthday ?? '')
+    setBirthplace(member.birthplace ?? '')
+    setDeathDate(member.deathDate ?? '')
     setGender(member.gender)
     setLocation(member.location ?? '')
     setStory(member.story ?? '')
@@ -131,6 +145,9 @@ export default function MemberScreen() {
     if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
       setError('Birthday format: YYYY-MM-DD'); return
     }
+    if (deathDate && !/^\d{4}-\d{2}-\d{2}$/.test(deathDate)) {
+      setError('Death date format: YYYY-MM-DD'); return
+    }
     setSaving(true)
 
     // Upload new photo if the user picked one, otherwise keep existing
@@ -141,13 +158,15 @@ export default function MemberScreen() {
     }
 
     const updates = {
-      name:     name.trim(),
-      birthday: birthday || null,
+      name:       name.trim(),
+      birthday:   birthday || null,
+      birthplace: birthplace.trim() || null,
+      deathDate:  deathDate.trim() || null,
       gender,
-      location: location.trim() || null,
-      story:    story.trim() || null,
+      location:   location.trim() || null,
+      story:      story.trim() || null,
       deceased,
-      photo:    photoUrl,
+      photo:      photoUrl,
     }
     updatePerson(id!, updates)
     saveMember({ ...member, ...updates }).catch(() => undefined)
@@ -256,6 +275,18 @@ export default function MemberScreen() {
             </View>
 
             <View style={s.field}>
+              <Text style={s.label}>Birthplace <Text style={s.optional}>(optional)</Text></Text>
+              <TextInput
+                style={s.input}
+                value={birthplace}
+                onChangeText={setBirthplace}
+                placeholder="e.g. Accra, Ghana"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={s.field}>
               <Text style={s.label}>Gender</Text>
               <View style={s.chipRow}>
                 {GENDERS.map(g => (
@@ -311,6 +342,21 @@ export default function MemberScreen() {
               />
             </View>
 
+            {deceased && (
+              <View style={s.field}>
+                <Text style={s.label}>Date of death <Text style={s.optional}>(optional)</Text></Text>
+                <TextInput
+                  style={s.input}
+                  value={deathDate}
+                  onChangeText={setDeathDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+              </View>
+            )}
+
             {!!error && <Text style={s.error}>{error}</Text>}
 
             {!isMe && (
@@ -354,10 +400,16 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {(member.birthday || member.gender || member.location) && (
+        {(member.birthday || member.birthplace || member.deathDate || member.gender || member.location) && (
           <View style={s.card}>
             {member.birthday && (
-              <InfoRow label="Birthday" value={member.birthday} />
+              <InfoRow label="Born" value={formatDate(member.birthday)} />
+            )}
+            {member.birthplace && (
+              <InfoRow label="Birthplace" value={member.birthplace} />
+            )}
+            {member.deathDate && (
+              <InfoRow label="Died" value={formatDate(member.deathDate)} />
             )}
             {member.gender && (
               <InfoRow label="Gender" value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[member.gender]} />

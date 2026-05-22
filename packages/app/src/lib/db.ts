@@ -13,16 +13,18 @@ export async function createTree(name: string, ownerId: string): Promise<string>
 
 export async function saveMember(person: Person): Promise<void> {
   const { error } = await supabase.from('members').upsert({
-    id: person.id,
-    tree_id: person.treeId,
-    name: person.name,
-    nickname: person.nickname,
-    gender: person.gender,
-    birthday: person.birthday,
-    photo: person.photo,
-    location: person.location,
-    story: person.story,
-    deceased: person.deceased,
+    id:         person.id,
+    tree_id:    person.treeId,
+    name:       person.name,
+    nickname:   person.nickname,
+    gender:     person.gender,
+    birthday:   person.birthday,
+    birthplace: person.birthplace,
+    death_date: person.deathDate,
+    photo:      person.photo,
+    location:   person.location,
+    story:      person.story,
+    deceased:   person.deceased,
   })
   if (error) throw error
 }

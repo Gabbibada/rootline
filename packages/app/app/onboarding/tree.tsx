@@ -43,16 +43,18 @@ export default function TreeScreen() {
       const treeId   = user ? await createTree(treeName.trim(), user.id).catch(() => uid()) : uid()
 
       const person: Person = {
-        id:       personId,
-        name:     params.name ?? '',
-        nickname: null,
-        gender:   (params.gender as Gender) ?? 'M',
-        birthday: params.birthday || null,
-        photo:    null,
-        location: null,
-        story:    null,
+        id:         personId,
+        name:       params.name ?? '',
+        nickname:   null,
+        gender:     (params.gender as Gender) ?? 'M',
+        birthday:   params.birthday || null,
+        birthplace: null,
+        deathDate:  null,
+        photo:      null,
+        location:   null,
+        story:      null,
         treeId,
-        deceased: false,
+        deceased:   false,
       }
 
       initGraph(person, treeName.trim())

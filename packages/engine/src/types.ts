@@ -4,16 +4,18 @@ export type EdgeSubtype = 'biological' | 'step' | 'adoptive' | 'legal'
 export type Direction = 'up' | 'down' | 'spouse'
 
 export interface Person {
-  id:       string
-  name:     string
-  nickname: string | null
-  gender:   Gender
-  birthday: string | null
-  photo:    string | null
-  location: string | null
-  story:    string | null
-  treeId:   string
-  deceased: boolean
+  id:         string
+  name:       string
+  nickname:   string | null
+  gender:     Gender
+  birthday:   string | null   // YYYY-MM-DD
+  birthplace: string | null
+  deathDate:  string | null   // YYYY-MM-DD
+  photo:      string | null
+  location:   string | null
+  story:      string | null
+  treeId:     string
+  deceased:   boolean
 }
 
 export interface Relationship {
