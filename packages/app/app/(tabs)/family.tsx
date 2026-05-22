@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { useAllRelationships } from '../../src/hooks/useRelationship'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
+import { TreeMark } from '../../src/components/TreeMark'
 import { Person } from '@rootline/engine'
 import { Avatar } from '../../src/components/Avatar'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
@@ -144,10 +145,18 @@ export default function FamilyScreen() {
               </>
             ) : (
               <>
-                <Text style={s.emptyTitle}>No family members yet</Text>
+                <TreeMark size={90} color={Colors.amber} />
+                <Text style={s.emptyTitle}>Your family goes here</Text>
                 <Text style={s.emptyBody}>
-                  Tap <Text style={s.emptyLink}>+ Add</Text> to start building your tree.
+                  Start by adding a parent, sibling, or child.{'\n'}
+                  Your tree builds itself from there.
                 </Text>
+                <Pressable
+                  style={({ pressed }) => [s.emptyBtn, pressed && s.emptyBtnPressed]}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <Text style={s.emptyBtnText}>+ Add a family member</Text>
+                </Pressable>
               </>
             )}
           </View>
@@ -188,8 +197,11 @@ const s = StyleSheet.create({
 
   // Empty states
   empty:          { paddingTop: Spacing.xxxl, alignItems: 'center', paddingHorizontal: Spacing.xl },
-  emptyTitle:     { ...Typography.nameTag, color: Colors.textDark, marginBottom: Spacing.sm },
+  emptyTitle:     { ...Typography.nameTag, color: Colors.textDark, marginTop: Spacing.lg, marginBottom: Spacing.sm },
   emptyBody:      { ...Typography.body, color: Colors.textMuted, textAlign: 'center', lineHeight: 24 },
   emptyLink:      { color: Colors.amber },
   emptyHighlight: { color: Colors.textDark },
+  emptyBtn:       { marginTop: Spacing.xl, height: 48, paddingHorizontal: Spacing.xxl, backgroundColor: Colors.amber, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  emptyBtnPressed:{ opacity: 0.8 },
+  emptyBtnText:   { ...Typography.label, fontSize: 14, color: Colors.cream },
 })

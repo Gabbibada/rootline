@@ -8,6 +8,8 @@ import { useRouter } from 'expo-router'
 import Svg, { Circle, Line, Text as SvgText, G } from 'react-native-svg'
 import { buildAdjacency, FamilyGraph, createEngine } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
+import { AddMemberModal } from '../../src/components/AddMemberModal'
+import { TreeMark } from '../../src/components/TreeMark'
 import { Colors, Typography, Spacing, Shadow, Radius } from '../../src/theme'
 
 // ── Layout constants ─────────────────────────────────────────────────────────
@@ -115,6 +117,7 @@ export default function TreeScreen() {
   // Search
   const [searchOpen,  setSearchOpen]  = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [addModal,    setAddModal]    = useState(false)
 
   // Pan/zoom using React Native's built-in Animated + PanResponder
   // (no reanimated needed — compatible with Expo Go)
@@ -263,8 +266,19 @@ export default function TreeScreen() {
           <Text style={s.title}>Tree</Text>
         </View>
         <View style={s.empty}>
-          <Text style={s.emptyText}>Add family members to see your tree.</Text>
+          <TreeMark size={110} color={Colors.amber} />
+          <Text style={s.emptyTitle}>Your tree starts here</Text>
+          <Text style={s.emptyBody}>
+            Add family members and watch{'\n'}your roots take shape.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [s.emptyBtn, pressed && s.emptyBtnPressed]}
+            onPress={() => setAddModal(true)}
+          >
+            <Text style={s.emptyBtnText}>+ Add a family member</Text>
+          </Pressable>
         </View>
+        <AddMemberModal visible={addModal} onClose={() => setAddModal(false)} />
       </SafeAreaView>
     )
   }
@@ -477,7 +491,11 @@ const s = StyleSheet.create({
   header:         { height: HEADER_H, paddingHorizontal: Spacing.xl, justifyContent: 'flex-end', paddingBottom: Spacing.lg },
   title:          { ...Typography.heading1, color: Colors.cream },
   empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  emptyText:      { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
+  emptyTitle:     { ...Typography.heading2, color: Colors.cream, marginTop: Spacing.xl, textAlign: 'center' },
+  emptyBody:      { ...Typography.body, color: Colors.sand, opacity: 0.65, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 24 },
+  emptyBtn:       { marginTop: Spacing.xxl, height: 48, paddingHorizontal: Spacing.xxl, backgroundColor: Colors.amber, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  emptyBtnPressed:{ opacity: 0.8 },
+  emptyBtnText:   { ...Typography.label, fontSize: 14, color: Colors.cream },
   canvas:         { flex: 1, overflow: 'hidden' },
   svgWrap:        { position: 'absolute', left: 0, top: 0 },
 

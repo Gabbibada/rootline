@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rootline — Generate App Assets</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #1C1008; color: #F7F0E6;
+           display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 24px; }
+    h1   { font-size: 24px; margin: 0; color: #B07D4A; }
+    p    { color: #E8C99A; opacity: 0.75; margin: 0; font-size: 14px; text-align: center; }
+    canvas { border-radius: 20%; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
+    .btns  { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    button { padding: 12px 28px; background: #B07D4A; color: #F7F0E6; border: none;
+             border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+             transition: opacity 0.15s; }
+    button:hover { opacity: 0.85; }
+    .note { font-size: 12px; color: #E8C99A; opacity: 0.55; max-width: 400px; text-align: center; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>Rootline Asset Generator</h1>
+  <p>Open this file in Chrome, then click the buttons below to download the required assets.</p>
+
+  <canvas id="c" width="1024" height="1024"></canvas>
+
+  <div class="btns">
+    <button onclick="dl('icon.png',     1024, 1024)">⬇ icon.png (1024×1024)</button>
+    <button onclick="dl('splash.png',   2048, 2048)">⬇ splash.png (2048×2048)</button>
+    <button onclick="dl('favicon.png',   48,   48)">⬇ favicon.png (48×48)</button>
+  </div>
+
+  <p class="note">
+    Place the downloaded files in <code>packages/app/assets/</code> — the same folder as this file.
+    Then run <code>npx expo start</code> and the icon will appear automatically.
+  </p>
+
+  <script>
+    const BARK  = '#1C1008'
+    const AMBER = '#B07D4A'
+
+    /**
+     * Draws the Rootline tree-mark centred inside a square canvas of side `side`.
+     * The viewBox of the SVG source is 180×140 (centre 90, 70).
+     */
+    function drawMark(ctx, side) {
+      // Scale the 180×140 viewBox so it fills ~62 % of the canvas
+      const targetH = side * 0.62
+      const S  = targetH / 140          // pixels per SVG unit
+      const OX = side / 2 - 90 * S     // left offset so x=90 centres horizontally
+      const OY = side / 2 - 70 * S     // top  offset so y=70 centres vertically
+
+      const tx = x => OX + x * S
+      const ty = y => OY + y * S
+
+      function line(x1, y1, x2, y2, w) {
+        ctx.beginPath()
+        ctx.strokeStyle = AMBER
+        ctx.lineWidth   = w * S
+        ctx.lineCap     = 'round'
+        ctx.moveTo(tx(x1), ty(y1))
+        ctx.lineTo(tx(x2), ty(y2))
+        ctx.stroke()
+      }
+
+      function dot(cx, cy, r, filled) {
+        ctx.beginPath()
+        ctx.arc(tx(cx), ty(cy), r * S, 0, Math.PI * 2)
+        if (filled) {
+          ctx.fillStyle = AMBER
+          ctx.fill()
+        } else {
+          ctx.strokeStyle = AMBER
+          ctx.lineWidth   = 1.2 * S
+          ctx.stroke()
+        }
+      }
+
+      // ── Lines ──────────────────────────────────────────────────────────────
+      // Trunk
+      line(90, 140, 90,  80, 2.5)
+      // Gen-1 branches
+      line(90, 110, 55,  78, 2)
+      line(90, 110, 125, 78, 2)
+      // Gen-2 branches
+      line(55,  78, 35,  46, 1.5)
+      line(55,  78, 70,  46, 1.5)
+      line(125, 78, 110, 46, 1.5)
+      line(125, 78, 145, 46, 1.5)
+      // Gen-3 branches
+      line(35,  46, 22,  18, 1)
+      line(35,  46, 48,  18, 1)
+      line(70,  46, 83,  18, 1)
+      line(145, 46, 132, 18, 1)
+
+      // ── Filled nodes (known members) ───────────────────────────────────────
+      dot(90,  80, 5.5, true)
+      dot(55,  78, 4.5, true)
+      dot(125, 78, 4.5, true)
+      dot(35,  46, 4,   true)
+      dot(70,  46, 4,   true)
+      dot(110, 46, 4,   true)
+      dot(145, 46, 4,   true)
+
+      // ── Outline nodes (ancestors not yet discovered) ───────────────────────
+      dot(22,  18, 3.5, false)
+      dot(48,  18, 3.5, false)
+      dot(83,  18, 3.5, false)
+      dot(132, 18, 3.5, false)
+    }
+
+    // Draw preview on page load
+    const preview = document.getElementById('c')
+    const pCtx    = preview.getContext('2d')
+    pCtx.fillStyle = BARK
+    pCtx.fillRect(0, 0, 1024, 1024)
+    drawMark(pCtx, 1024)
+
+    // Download helper
+    function dl(filename, w, h) {
+      const tmp  = document.createElement('canvas')
+      tmp.width  = w
+      tmp.height = h
+      const ctx  = tmp.getContext('2d')
+
+      ctx.fillStyle = BARK
+      ctx.fillRect(0, 0, w, h)
+      drawMark(ctx, w)   // uses the smaller dimension when it's a splash (but w===h here)
+
+      const a    = document.createElement('a')
+      a.download = filename
+      a.href     = tmp.toDataURL('image/png')
+      a.click()
+    }
+  </script>
+</body>
+</html>
