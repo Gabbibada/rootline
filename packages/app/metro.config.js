@@ -19,4 +19,19 @@ config.resolver.extraNodeModules = {
   '@rootline/engine': engineRoot,
 };
 
+// Force Supabase to resolve to its CJS build.
+// The ESM build (index.mjs) uses dynamic import(variable) which Hermes
+// rejects with "Invalid expression encountered". CJS uses require() which
+// Hermes handles fine.
+const defaultResolver = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === '@supabase/supabase-js') {
+    return {
+      filePath: require.resolve('@supabase/supabase-js/dist/index.cjs'),
+      type: 'sourceFile',
+    };
+  }
+  return (defaultResolver ?? context.resolveRequest)(context, moduleName, platform);
+};
+
 module.exports = config;
