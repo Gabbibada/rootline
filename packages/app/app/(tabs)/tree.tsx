@@ -20,14 +20,15 @@ const NODE_R      = 26
 const H_GAP       = 120
 const COUPLE_GAP  = 80
 const V_GAP       = 140
-const CANVAS      = 4000
+const CANVAS      = 2000   // 2000×2000 keeps texture memory to ~16 MB
 const OFFSET      = CANVAS / 2
 
 // ── Pure layout computation ───────────────────────────────────────────────────
 interface NodePos { x: number; y: number }
 
 function computeLayout(graph: FamilyGraph, rootId: string): Map<string, NodePos> {
-  const adj = buildAdjacency(graph.relationships)
+  const rels = Array.isArray(graph.relationships) ? graph.relationships : []
+  const adj  = buildAdjacency(rels)
 
   const gen = new Map<string, number>([[rootId, 0]])
   const bfsQ: Array<{ id: string; g: number }> = [{ id: rootId, g: 0 }]
@@ -45,7 +46,7 @@ function computeLayout(graph: FamilyGraph, rootId: string): Map<string, NodePos>
 
   const spouseOf  = new Map<string, string>()
   const parentsOf = new Map<string, string[]>()
-  for (const rel of graph.relationships) {
+  for (const rel of rels) {
     if (!gen.has(rel.from) || !gen.has(rel.to)) continue
     if (rel.type === 'spouse') {
       spouseOf.set(rel.from, rel.to)
@@ -178,16 +179,25 @@ export default function TreeScreen() {
     return computeLayout(graph, currentUserId)
   }, [graph, currentUserId])
 
-  // Relationship label for every node ("Your dad", "Your sister", …)
-  const labelMap = useMemo(() => {
-    if (!graph || !currentUserId) return new Map<string, string>()
-    const engine = createEngine(graph)
-    const map    = new Map<string, string>()
-    map.set(currentUserId, 'You')
-    for (const { personId, result } of engine.getAllRelationships(currentUserId)) {
-      if (result.found) map.set(personId, result.path.label)
-    }
-    return map
+  // Relationship label for every node — computed after paint so it never
+  // blocks the initial render / risks an OOM-kill on the JS thread.
+  const [labelMap, setLabelMap] = useState<Map<string, string>>(new Map())
+  useEffect(() => {
+    if (!graph || !currentUserId) { setLabelMap(new Map()); return }
+    const id = setTimeout(() => {
+      try {
+        const engine = createEngine(graph)
+        const map    = new Map<string, string>()
+        map.set(currentUserId, 'You')
+        for (const { personId, result } of engine.getAllRelationships(currentUserId)) {
+          if (result.found) map.set(personId, result.path.label)
+        }
+        setLabelMap(map)
+      } catch {
+        setLabelMap(new Map([[currentUserId, 'You']]))
+      }
+    }, 50) // yield to the JS thread so the SVG renders first
+    return () => clearTimeout(id)
   }, [graph, currentUserId])
 
   // Fuzzy name search — top 5 matches
@@ -325,7 +335,7 @@ export default function TreeScreen() {
   }
 
   const people        = graph.people
-  const relationships = graph.relationships
+  const relationships = Array.isArray(graph.relationships) ? graph.relationships : []
 
   return (
     <SafeAreaView style={s.safe}>
