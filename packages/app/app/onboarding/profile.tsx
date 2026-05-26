@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Pla
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Gender } from '@rootline/engine'
+import { DatePickerField } from '../../src/components/DatePickerField'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
 
 const GENDERS: { label: string; value: Gender }[] = [
@@ -30,9 +31,6 @@ export default function ProfileScreen() {
   const next = () => {
     setError('')
     if (!name.trim()) { setError('Please enter your name.'); return }
-    if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
-      setError('Birthday format: YYYY-MM-DD'); return
-    }
     router.push({ pathname: '/onboarding/tree', params: { name: name.trim(), birthday, gender } })
   }
 
@@ -59,14 +57,10 @@ export default function ProfileScreen() {
 
           <View style={s.field}>
             <Text style={s.label}>Birthday <Text style={s.optional}>(optional)</Text></Text>
-            <TextInput
-              style={s.input}
-              value={birthday}
-              onChangeText={setBirthday}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              maxLength={10}
+            <DatePickerField
+              value={birthday || null}
+              onChange={iso => setBirthday(iso ?? '')}
+              maxDate={new Date()}
             />
           </View>
 

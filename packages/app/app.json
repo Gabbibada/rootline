@@ -6,33 +6,50 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "rootline",
-
     "splash": {
       "backgroundColor": "#1C1008"
     },
-
     "ios": {
-      "supportsTablet":   false,
+      "supportsTablet": false,
       "bundleIdentifier": "com.gabbibada.rootline"
     },
     "android": {
-      "package":          "com.gabbibada.rootline",
+      "package": "com.gabbibada.rootline",
       "adaptiveIcon": {
-        "backgroundColor":  "#1C1008"
-      }
+        "backgroundColor": "#1C1008"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
-
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-splash-screen",
       "expo-notifications",
-      ["expo-image-picker", {
-        "photosPermission": "Allow Rootline to access your photos to set profile pictures."
-      }]
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Rootline to access your photos to set profile pictures."
+        }
+      ]
     ],
-
     "sdkVersion": "54.0.0",
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "998259e5-1664-4aa9-bbb3-08d007fcc348"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/998259e5-1664-4aa9-bbb3-08d007fcc348"
+    }
   }
 }

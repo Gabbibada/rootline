@@ -16,6 +16,8 @@ import {
   cancelAllBirthdayNotifications,
 } from '../../src/lib/notifications'
 import { Avatar } from '../../src/components/Avatar'
+import { DatePickerField, displayDate } from '../../src/components/DatePickerField'
+import { Toast } from '../../src/components/Toast'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
 
 const GENDERS: { label: string; value: Gender }[] = [
@@ -23,16 +25,6 @@ const GENDERS: { label: string; value: Gender }[] = [
   { label: 'Woman',      value: 'F'  },
   { label: 'Non-binary', value: 'NB' },
 ]
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  if (!year || !month || !day) return dateStr
-  const MONTHS = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December',
-  ]
-  return `${MONTHS[month - 1]} ${day}, ${year}`
-}
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -50,6 +42,7 @@ export default function ProfileScreen() {
   const [editing,     setEditing]     = useState(false)
   const [saving,      setSaving]      = useState(false)
   const [notifStatus, setNotifStatus] = useState<string | null>(null)
+  const [toast,       setToast]       = useState(false)
 
   // Edit fields
   const [name,       setName]       = useState('')
@@ -97,9 +90,6 @@ export default function ProfileScreen() {
   const save = async () => {
     setError('')
     if (!name.trim()) { setError('Name cannot be empty.'); return }
-    if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
-      setError('Birthday format: YYYY-MM-DD'); return
-    }
     if (!me || !currentUserId) return
 
     setSaving(true)
@@ -126,6 +116,7 @@ export default function ProfileScreen() {
 
     setSaving(false)
     setEditing(false)
+    setToast(true)
   }
 
   const pickPhoto = async () => {
@@ -156,6 +147,7 @@ export default function ProfileScreen() {
   if (!editing) {
     return (
       <SafeAreaView style={s.safe}>
+        <Toast visible={toast} message="Profile saved ✓" onHide={() => setToast(false)} />
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={s.heroSection}>
             <Avatar
@@ -178,7 +170,7 @@ export default function ProfileScreen() {
 
           {(me?.birthday || me?.birthplace || me?.gender || me?.location || (me as any)?.occupation) && (
             <View style={s.card}>
-              {me.birthday              && <InfoRow label="Born"       value={formatDate(me.birthday)} />}
+              {me.birthday              && <InfoRow label="Born"       value={displayDate(me.birthday)} />}
               {me.birthplace            && <InfoRow label="Birthplace" value={me.birthplace} />}
               {(me as any).occupation   && <InfoRow label="Occupation" value={(me as any).occupation} />}
               {me.gender                && <InfoRow label="Gender"     value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[me.gender]} />}
@@ -267,14 +259,10 @@ export default function ProfileScreen() {
 
           <View style={s.field}>
             <Text style={s.label}>Birthday <Text style={s.optional}>(optional)</Text></Text>
-            <TextInput
-              style={s.input}
-              value={birthday}
-              onChangeText={setBirthday}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              maxLength={10}
+            <DatePickerField
+              value={birthday || null}
+              onChange={iso => setBirthday(iso ?? '')}
+              maxDate={new Date()}
             />
           </View>
 

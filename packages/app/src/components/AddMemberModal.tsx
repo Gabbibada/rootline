@@ -6,6 +6,7 @@ import {
 import { Gender, Person, Relationship } from '@rootline/engine'
 import { useFamilyStore } from '../store/familyStore'
 import { saveMember, saveRelationship } from '../lib/db'
+import { DatePickerField } from './DatePickerField'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 
 function uid() {
@@ -31,12 +32,13 @@ const REL_OPTIONS: { label: string; value: RelChoice }[] = [
 ]
 
 export interface AddMemberModalProps {
-  visible:  boolean
-  onClose:  () => void
-  pivotId?: string   // defaults to currentUserId when omitted
+  visible:     boolean
+  onClose:     () => void
+  onSuccess?:  (name: string) => void   // called just before sheet closes
+  pivotId?:    string                   // defaults to currentUserId when omitted
 }
 
-export function AddMemberModal({ visible, onClose, pivotId }: AddMemberModalProps) {
+export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemberModalProps) {
   const { graph, currentUserId, addPerson, addRelationship: storeAddRel } = useFamilyStore()
   const me = currentUserId ? graph?.people[currentUserId] : null
 
@@ -71,9 +73,6 @@ export function AddMemberModal({ visible, onClose, pivotId }: AddMemberModalProp
   const submit = async () => {
     setError('')
     if (!name.trim()) { setError('Please enter a name.'); return }
-    if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
-      setError('Birthday format: YYYY-MM-DD'); return
-    }
     if (!me || !effectivePivotId) { setError('No current user found.'); return }
     if (relChoice === 'sibling' && !siblingAvailable) {
       setError(`Add a parent first to connect siblings.`); return
@@ -119,6 +118,7 @@ export function AddMemberModal({ visible, onClose, pivotId }: AddMemberModalProp
     if (rel) saveRelationship(rel).catch(() => undefined)
 
     setLoading(false)
+    onSuccess?.(name.trim())
     close()
   }
 
@@ -153,14 +153,10 @@ export function AddMemberModal({ visible, onClose, pivotId }: AddMemberModalProp
 
               <View style={s.field}>
                 <Text style={s.label}>Birthday <Text style={s.optional}>(optional)</Text></Text>
-                <TextInput
-                  style={s.input}
-                  value={birthday}
-                  onChangeText={setBirthday}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="numeric"
-                  maxLength={10}
+                <DatePickerField
+                  value={birthday || null}
+                  onChange={iso => setBirthday(iso ?? '')}
+                  maxDate={new Date()}
                 />
               </View>
 

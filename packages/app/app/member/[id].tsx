@@ -14,6 +14,8 @@ import { saveMember, deleteMember, uploadPhoto } from '../../src/lib/db'
 import { buildInviteUrl } from '../../src/lib/invite'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { Avatar } from '../../src/components/Avatar'
+import { DatePickerField, displayDate } from '../../src/components/DatePickerField'
+import { Toast } from '../../src/components/Toast'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
 
 const GENDERS: { label: string; value: Gender }[] = [
@@ -29,16 +31,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <Text style={s.infoValue}>{value}</Text>
     </View>
   )
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  if (!year || !month || !day) return dateStr
-  const MONTHS = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December',
-  ]
-  return `${MONTHS[month - 1]} ${day}, ${year}`
 }
 
 function stepLabel(dir: Direction): string {
@@ -94,6 +86,7 @@ export default function MemberScreen() {
   const [editing,     setEditing]     = useState(false)
   const [saving,      setSaving]      = useState(false)
   const [addVisible,  setAddVisible]  = useState(false)
+  const [toast,       setToast]       = useState(false)
 
   // Edit fields
   const [name,       setName]       = useState('')
@@ -146,12 +139,6 @@ export default function MemberScreen() {
   const save = async () => {
     setError('')
     if (!name.trim()) { setError('Name cannot be empty.'); return }
-    if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
-      setError('Birthday format: YYYY-MM-DD'); return
-    }
-    if (deathDate && !/^\d{4}-\d{2}-\d{2}$/.test(deathDate)) {
-      setError('Death date format: YYYY-MM-DD'); return
-    }
     setSaving(true)
 
     // Upload new photo if the user picked one, otherwise keep existing
@@ -179,6 +166,7 @@ export default function MemberScreen() {
     logActivity('updated', { id: id!, name: name.trim() })
     setSaving(false)
     setEditing(false)
+    setToast(true)
   }
 
   const pickPhoto = async () => {
@@ -282,14 +270,10 @@ export default function MemberScreen() {
 
             <View style={s.field}>
               <Text style={s.label}>Birthday <Text style={s.optional}>(optional)</Text></Text>
-              <TextInput
-                style={s.input}
-                value={birthday}
-                onChangeText={setBirthday}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="numeric"
-                maxLength={10}
+              <DatePickerField
+                value={birthday || null}
+                onChange={iso => setBirthday(iso ?? '')}
+                maxDate={new Date()}
               />
             </View>
 
@@ -376,14 +360,10 @@ export default function MemberScreen() {
             {deceased && (
               <View style={s.field}>
                 <Text style={s.label}>Date of death <Text style={s.optional}>(optional)</Text></Text>
-                <TextInput
-                  style={s.input}
-                  value={deathDate}
-                  onChangeText={setDeathDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="numeric"
-                  maxLength={10}
+                <DatePickerField
+                  value={deathDate || null}
+                  onChange={iso => setDeathDate(iso ?? '')}
+                  maxDate={new Date()}
                 />
               </View>
             )}
@@ -407,6 +387,7 @@ export default function MemberScreen() {
   // ── Read mode ───────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={s.safe}>
+      <Toast visible={toast} message="Changes saved ✓" onHide={() => setToast(false)} />
       <ScrollView contentContainerStyle={s.scroll}>
         <View style={s.readHeader}>
           <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -435,13 +416,13 @@ export default function MemberScreen() {
         {(member.birthday || member.birthplace || member.deathDate || member.gender || member.location || (member as any).occupation) && (
           <View style={s.card}>
             {member.birthday && (
-              <InfoRow label="Born" value={formatDate(member.birthday)} />
+              <InfoRow label="Born" value={displayDate(member.birthday)} />
             )}
             {member.birthplace && (
               <InfoRow label="Birthplace" value={member.birthplace} />
             )}
             {member.deathDate && (
-              <InfoRow label="Died" value={formatDate(member.deathDate)} />
+              <InfoRow label="Died" value={displayDate(member.deathDate)} />
             )}
             {member.gender && (
               <InfoRow label="Gender" value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[member.gender]} />
@@ -483,6 +464,7 @@ export default function MemberScreen() {
       <AddMemberModal
         visible={addVisible}
         onClose={() => setAddVisible(false)}
+        onSuccess={name => setToast(`${name} added ✓`)}
         pivotId={id}
       />
     </SafeAreaView>

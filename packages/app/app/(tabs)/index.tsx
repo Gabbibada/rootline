@@ -6,6 +6,7 @@ import { createEngine, buildAdjacency } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { Avatar } from '../../src/components/Avatar'
+import { Toast } from '../../src/components/Toast'
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/theme'
 
 function timeAgo(ts: number): string {
@@ -41,6 +42,16 @@ function daysLabel(days: number): string {
   return `${days} days`
 }
 
+/** Compute current age in full years from a YYYY-MM-DD birthday string */
+function computeAge(birthday: string): number | null {
+  const [y, m, d] = birthday.split('-').map(Number)
+  if (!y || !m || !d) return null
+  const today = new Date()
+  let age = today.getFullYear() - y
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--
+  return age >= 0 ? age : null
+}
+
 function computeGenerationSpan(graph: ReturnType<typeof useFamilyStore>['graph'], rootId: string): number {
   if (!graph) return 1
   const rels = Array.isArray(graph.relationships) ? graph.relationships : []
@@ -65,6 +76,7 @@ function computeGenerationSpan(graph: ReturnType<typeof useFamilyStore>['graph']
 export default function HomeScreen() {
   const router = useRouter()
   const [modalVisible, setModalVisible] = useState(false)
+  const [toast,        setToast]        = useState('')
   const { graph, currentUserId, treeName, activityLog } = useFamilyStore()
   const me        = currentUserId ? graph?.people[currentUserId] : null
   const firstName = me?.name.split(' ')[0] ?? 'there'
@@ -95,18 +107,51 @@ export default function HomeScreen() {
     }))
 
     // Stats
-    const memberCount = Object.keys(graph.people).length
-    const generations = computeGenerationSpan(graph, currentUserId)
-    const oldestPerson = Object.values(graph.people)
-      .filter(p => p.birthday && p.id !== currentUserId)
+    const allPeople    = Object.values(graph.people)
+    const memberCount  = allPeople.length
+    const generations  = computeGenerationSpan(graph, currentUserId)
+    const livingCount  = allPeople.filter(p => !p.deceased).length
+    const deceasedCount= allPeople.filter(p =>  p.deceased).length
+
+    // Average age — living members who have a birthday
+    const livingAges = allPeople
+      .filter(p => !p.deceased && p.birthday)
+      .map(p => computeAge(p.birthday!))
+      .filter((a): a is number => a !== null)
+    const avgAge = livingAges.length > 1
+      ? Math.round(livingAges.reduce((s, a) => s + a, 0) / livingAges.length)
+      : null
+
+    // Oldest living member (not self) with a known birthday
+    const oldestLiving = allPeople
+      .filter(p => !p.deceased && p.birthday && p.id !== currentUserId)
+      .map(p => ({ ...p, age: computeAge(p.birthday!) }))
+      .filter(p => p.age !== null)
       .sort((a, b) => a.birthday!.localeCompare(b.birthday!))
       [0] ?? null
+
+    // Marriages = spouse-type relationships
+    const rels         = Array.isArray(graph.relationships) ? graph.relationships : []
+    const marriageCount= rels.filter(r => r.type === 'spouse').length
+
+    // Profile completeness — % of members who have both a photo AND a birthday
+    const withPhoto    = allPeople.filter(p => p.photo).length
+    const withBirthday = allPeople.filter(p => p.birthday).length
+    const completeness = memberCount > 1
+      ? Math.round(((withPhoto + withBirthday) / (memberCount * 2)) * 100)
+      : null
 
     const stats = memberCount > 1 ? {
       memberCount,
       generations,
-      oldestName:  oldestPerson?.name.split(' ')[0] ?? null,
-      oldestYear:  oldestPerson?.birthday?.slice(0, 4) ?? null,
+      livingCount,
+      deceasedCount,
+      avgAge,
+      marriageCount,
+      oldestName:    oldestLiving?.name.split(' ')[0] ?? null,
+      oldestYear:    oldestLiving?.birthday?.slice(0, 4) ?? null,
+      oldestAge:     oldestLiving?.age ?? null,
+      completeness,
     } : null
 
     // Missing birthday count (excluding self)
@@ -214,28 +259,88 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* ── Tree stats ── */}
+        {/* ── Tree stats dashboard ── */}
         {stats && (
           <View style={s.section}>
             <View style={s.sectionHeader}>
               <Text style={s.sectionTitle}>Your tree</Text>
             </View>
+
+            {/* Row 1 — size + shape */}
             <View style={s.statsRow}>
-              <View style={[s.statCard, s.statCardFull]}>
+              <View style={[s.statCard, s.statCardHalf]}>
                 <Text style={s.statNumber}>{stats.memberCount}</Text>
                 <Text style={s.statLabel}>{stats.memberCount === 1 ? 'member' : 'members'}</Text>
               </View>
-              <View style={[s.statCard, s.statCardFull]}>
+              <View style={[s.statCard, s.statCardHalf]}>
                 <Text style={s.statNumber}>{stats.generations}</Text>
                 <Text style={s.statLabel}>{stats.generations === 1 ? 'generation' : 'generations'}</Text>
               </View>
-              {stats.oldestName && (
-                <View style={[s.statCard, s.statCardWide]}>
-                  <Text style={s.statNumber}>{stats.oldestYear ?? '—'}</Text>
-                  <Text style={s.statLabel}>oldest — {stats.oldestName}</Text>
-                </View>
-              )}
             </View>
+
+            {/* Row 2 — living vs deceased */}
+            <View style={s.statsRow}>
+              <View style={[s.statCard, s.statCardHalf]}>
+                <Text style={s.statNumber}>{stats.livingCount}</Text>
+                <Text style={s.statLabel}>living</Text>
+              </View>
+              <View style={[s.statCard, s.statCardHalf]}>
+                <Text style={s.statNumber}>{stats.deceasedCount}</Text>
+                <Text style={s.statLabel}>deceased</Text>
+              </View>
+            </View>
+
+            {/* Row 3 — avg age + marriages (only if data) */}
+            {(stats.avgAge !== null || stats.marriageCount > 0) && (
+              <View style={s.statsRow}>
+                {stats.avgAge !== null && (
+                  <View style={[s.statCard, s.statCardHalf]}>
+                    <Text style={s.statNumber}>{stats.avgAge}</Text>
+                    <Text style={s.statLabel}>avg age</Text>
+                  </View>
+                )}
+                {stats.marriageCount > 0 && (
+                  <View style={[s.statCard, s.statCardHalf]}>
+                    <Text style={s.statNumber}>{stats.marriageCount}</Text>
+                    <Text style={s.statLabel}>{stats.marriageCount === 1 ? 'marriage' : 'marriages'}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Wide — oldest member */}
+            {stats.oldestName && (
+              <View style={[s.statCard, s.statCardWide]}>
+                <View style={s.statWideRow}>
+                  <View style={s.statWideText}>
+                    <Text style={s.statWideLabel}>Oldest member</Text>
+                    <Text style={s.statWideName}>{stats.oldestName}</Text>
+                  </View>
+                  <View style={s.statWideRight}>
+                    {stats.oldestAge !== null && (
+                      <Text style={s.statWideAge}>{stats.oldestAge} yrs</Text>
+                    )}
+                    {stats.oldestYear && (
+                      <Text style={s.statWideYear}>b. {stats.oldestYear}</Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Wide — profile completeness */}
+            {stats.completeness !== null && (
+              <View style={[s.statCard, s.statCardWide, s.statCardLight]}>
+                <View style={s.completenessHeader}>
+                  <Text style={s.completenessLabel}>Profile completeness</Text>
+                  <Text style={s.completenessPct}>{stats.completeness}%</Text>
+                </View>
+                <View style={s.progressTrack}>
+                  <View style={[s.progressFill, { width: `${stats.completeness}%` as any }]} />
+                </View>
+                <Text style={s.completenessHint}>Based on photos + birthdays added</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -296,7 +401,12 @@ export default function HomeScreen() {
         </Pressable>
       </ScrollView>
 
-      <AddMemberModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+      <Toast visible={!!toast} message={toast} onHide={() => setToast('')} />
+      <AddMemberModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSuccess={name => setToast(`${name} added to your tree ✓`)}
+      />
     </SafeAreaView>
   )
 }
@@ -338,13 +448,32 @@ const s = StyleSheet.create({
   daysPill:       { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.full, backgroundColor: Colors.cream, borderWidth: 1, borderColor: Colors.border },
   daysText:       { ...Typography.mono, fontSize: 10, color: Colors.textMid },
 
-  // Stats
-  statsRow:       { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  statCard:       { backgroundColor: Colors.cream2, borderRadius: Radius.lg, padding: Spacing.lg, alignItems: 'center', ...Shadow.card },
-  statCardFull:   { flex: 1 },
-  statCardWide:   { width: '100%' },
-  statNumber:     { ...Typography.heading1, color: Colors.textDark, lineHeight: 32 },
-  statLabel:      { ...Typography.caption, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
+  // Stats dashboard
+  statsRow:       { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  statCard:       { backgroundColor: Colors.bark, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.bark3, ...Shadow.strong },
+  statCardHalf:   { flex: 1, alignItems: 'center' },
+  statCardFull:   { flex: 1, alignItems: 'center' },   // legacy alias
+  statCardWide:   { width: '100%', marginBottom: Spacing.sm },
+  statCardLight:  { backgroundColor: Colors.cream2, borderColor: Colors.border },
+  statNumber:     { ...Typography.heading1, color: Colors.cream, lineHeight: 32 },
+  statLabel:      { ...Typography.caption, color: Colors.sand, marginTop: 2, textAlign: 'center', opacity: 0.65 },
+
+  // Oldest member — wide card
+  statWideRow:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  statWideText:   { flex: 1 },
+  statWideLabel:  { ...Typography.caption, color: Colors.sand, textTransform: 'uppercase', letterSpacing: 0.6, opacity: 0.55 },
+  statWideName:   { ...Typography.nameTag, color: Colors.cream, marginTop: 2 },
+  statWideRight:  { alignItems: 'flex-end' },
+  statWideAge:    { ...Typography.heading2, color: Colors.amber, lineHeight: 24 },
+  statWideYear:   { ...Typography.caption, color: Colors.sand, marginTop: 2, opacity: 0.55 },
+
+  // Completeness — wide card (cream background)
+  completenessHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+  completenessLabel:  { ...Typography.label, color: Colors.textMid, flex: 1 },
+  completenessPct:    { ...Typography.label, color: Colors.amber, fontSize: 15 },
+  progressTrack:      { height: 6, backgroundColor: Colors.border, borderRadius: 3, marginBottom: Spacing.sm },
+  progressFill:       { height: 6, backgroundColor: Colors.amber, borderRadius: 3 },
+  completenessHint:   { ...Typography.caption, color: Colors.textMuted },
 
   // Nudge
   nudge:          { backgroundColor: Colors.bark, borderRadius: Radius.md, padding: Spacing.md,

@@ -11,9 +11,6 @@ import { useFamilyStore } from '../../src/store/familyStore'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { TreeMark } from '../../src/components/TreeMark'
 import { Colors, Typography, Spacing, Shadow, Radius } from '../../src/theme'
-import * as Print from 'expo-print'
-import * as Sharing from 'expo-sharing'
-import { exportGEDCOM } from '../../src/lib/gedcom'
 
 // ── Layout constants ─────────────────────────────────────────────────────────
 const NODE_R      = 26
@@ -122,44 +119,6 @@ export default function TreeScreen() {
   const [searchOpen,  setSearchOpen]  = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [addModal,    setAddModal]    = useState(false)
-  const [exporting,   setExporting]   = useState(false)
-
-  const exportTree = async () => {
-    if (!graph || exporting) return
-    setExporting(true)
-    try {
-      const gedcom = exportGEDCOM(graph)
-      // Build a minimal HTML wrapping an SVG representation for PDF
-      const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-  body { font-family: Georgia, serif; padding: 40px; color: #1C1008; }
-  h1   { font-size: 28px; margin-bottom: 4px; }
-  p    { color: #666; font-size: 13px; margin-top: 0; }
-  table{ width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
-  th   { text-align: left; padding: 8px 12px; background: #1C1008; color: #F7F0E6; }
-  td   { padding: 8px 12px; border-bottom: 1px solid #E8C99A; }
-</style></head><body>
-<h1>${(graph as any).treeName ?? 'Family Tree'}</h1>
-<p>Exported from Rootline · ${new Date().toLocaleDateString()}</p>
-<table>
-  <tr><th>Name</th><th>Born</th><th>Birthplace</th><th>Occupation</th></tr>
-  ${Object.values(graph.people).map(p => `<tr>
-    <td>${p.name}${p.deceased ? ' †' : ''}</td>
-    <td>${p.birthday ?? '—'}</td>
-    <td>${p.birthplace ?? '—'}</td>
-    <td>${(p as any).occupation ?? '—'}</td>
-  </tr>`).join('')}
-</table>
-<pre style="margin-top:40px;font-size:10px;color:#999;white-space:pre-wrap">${gedcom}</pre>
-</body></html>`
-      const { uri } = await Print.printToFileAsync({ html, base64: false })
-      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share family tree' })
-    } catch {
-      // silently ignore share cancellation
-    } finally {
-      setExporting(false)
-    }
-  }
 
   // Pan/zoom using React Native's built-in Animated + PanResponder
   // (no reanimated needed — compatible with Expo Go)
@@ -341,13 +300,6 @@ export default function TreeScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Tree</Text>
-        <Pressable
-          style={({ pressed }) => [s.exportBtn, pressed && { opacity: 0.7 }, exporting && { opacity: 0.5 }]}
-          onPress={exportTree}
-          disabled={exporting}
-        >
-          <Text style={s.exportBtnText}>{exporting ? '…' : '↑ Export'}</Text>
-        </Pressable>
       </View>
 
       <View style={s.canvas} {...panResponder.panHandlers}>
@@ -546,10 +498,8 @@ export default function TreeScreen() {
 
 const s = StyleSheet.create({
   safe:           { flex: 1, backgroundColor: Colors.bark },
-  header:         { height: HEADER_H, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg },
+  header:         { height: HEADER_H, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg },
   title:          { ...Typography.heading1, color: Colors.cream },
-  exportBtn:      { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.bark3 },
-  exportBtnText:  { ...Typography.mono, fontSize: 11, color: Colors.sand, letterSpacing: 0.4 },
   empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   emptyTitle:     { ...Typography.heading2, color: Colors.cream, marginTop: Spacing.xl, textAlign: 'center' },
   emptyBody:      { ...Typography.body, color: Colors.sand, opacity: 0.65, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 24 },

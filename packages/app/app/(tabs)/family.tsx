@@ -1,21 +1,18 @@
 import { useState, useMemo } from 'react'
 import {
   View, Text, FlatList, Pressable, TextInput,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import * as DocumentPicker from 'expo-document-picker'
-import * as FileSystem from 'expo-file-system'
-import * as Sharing from 'expo-sharing'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { useAllRelationships } from '../../src/hooks/useRelationship'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { TreeMark } from '../../src/components/TreeMark'
-import { saveMember, saveRelationship } from '../../src/lib/db'
+import { saveMember } from '../../src/lib/db'
 import { Person } from '@rootline/engine'
-import { parseGEDCOM, exportGEDCOM } from '../../src/lib/gedcom'
 import { Avatar } from '../../src/components/Avatar'
+import { Toast } from '../../src/components/Toast'
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/theme'
 
 interface RowData {
@@ -58,10 +55,9 @@ export default function FamilyScreen() {
   const router = useRouter()
   const [modalVisible, setModalVisible] = useState(false)
   const [query,        setQuery]        = useState('')
-  const [importing,    setImporting]    = useState(false)
-  const [exporting,    setExporting]    = useState(false)
+  const [toast,        setToast]        = useState('')
 
-  const { graph, currentUserId, addPerson, addRelationship: storeAddRel, logActivity } = useFamilyStore()
+  const { graph, currentUserId, addPerson, logActivity } = useFamilyStore()
   const sorted = useAllRelationships(graph ?? null, currentUserId ?? null)
 
   const rows = useMemo<RowData[]>(() => {
@@ -104,62 +100,6 @@ export default function FamilyScreen() {
 
   const hasMembers = rows.length > 1
 
-  // ── GEDCOM import ─────────────────────────────────────────────────────────
-  const importGedcom = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['*/*'],   // .ged files have no registered MIME on iOS/Android
-        copyToCacheDirectory: true,
-      })
-      if (result.canceled) return
-
-      const file    = result.assets[0]
-      const content = await FileSystem.readAsStringAsync(file.uri)
-      const me      = currentUserId ? graph?.people[currentUserId] : null
-      if (!me) { Alert.alert('No tree', 'Set up your tree first.'); return }
-
-      setImporting(true)
-      const parsed = parseGEDCOM(content, me.treeId)
-
-      let added = 0
-      for (const person of parsed.people) {
-        addPerson(person as any)
-        saveMember(person as any).catch(() => undefined)
-        logActivity('added', person)
-        added++
-      }
-      for (const rel of parsed.relationships) {
-        storeAddRel(rel)
-        saveRelationship(rel).catch(() => undefined)
-      }
-
-      setImporting(false)
-      Alert.alert(
-        'Import complete',
-        `Added ${added} people${parsed.errors.length ? ` (${parsed.errors.length} warnings)` : ''}.`,
-      )
-    } catch {
-      setImporting(false)
-      Alert.alert('Import failed', 'Could not read the selected file.')
-    }
-  }
-
-  // ── GEDCOM export ─────────────────────────────────────────────────────────
-  const exportGedcom = async () => {
-    if (!graph) return
-    setExporting(true)
-    try {
-      const content = exportGEDCOM(graph)
-      const uri     = (FileSystem.documentDirectory ?? '') + 'family_tree.ged'
-      await FileSystem.writeAsStringAsync(uri, content, { encoding: FileSystem.EncodingType.UTF8 })
-      await Sharing.shareAsync(uri, { mimeType: 'text/plain', dialogTitle: 'Export family tree' })
-    } catch {
-      Alert.alert('Export failed', 'Could not share the file.')
-    } finally {
-      setExporting(false)
-    }
-  }
-
   return (
     <SafeAreaView style={s.safe}>
       {/* Header */}
@@ -175,22 +115,31 @@ export default function FamilyScreen() {
         </View>
       </View>
 
-      {/* Quick-action row — Relate & Quiz */}
+      {/* Quick-action rows */}
       {hasMembers && (
-        <View style={s.quickRow}>
+        <View style={s.quickActions}>
+          <View style={s.quickRow}>
+            <Pressable
+              style={({ pressed }) => [s.quickBtn, pressed && s.pressed]}
+              onPress={() => router.push('/relate')}
+            >
+              <Text style={s.quickBtnIcon}>↔</Text>
+              <Text style={s.quickBtnText}>How are we related?</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [s.quickBtn, pressed && s.pressed]}
+              onPress={() => router.push('/quiz')}
+            >
+              <Text style={s.quickBtnIcon}>🎯</Text>
+              <Text style={s.quickBtnText}>Family quiz</Text>
+            </Pressable>
+          </View>
           <Pressable
-            style={({ pressed }) => [s.quickBtn, pressed && s.pressed]}
-            onPress={() => router.push('/relate')}
+            style={({ pressed }) => [s.quickBtn, s.quickBtnWide, pressed && s.pressed]}
+            onPress={() => router.push('/timeline')}
           >
-            <Text style={s.quickBtnIcon}>↔</Text>
-            <Text style={s.quickBtnText}>How are we related?</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [s.quickBtn, pressed && s.pressed]}
-            onPress={() => router.push('/quiz')}
-          >
-            <Text style={s.quickBtnIcon}>🎯</Text>
-            <Text style={s.quickBtnText}>Family quiz</Text>
+            <Text style={s.quickBtnIcon}>📜</Text>
+            <Text style={s.quickBtnText}>Family timeline</Text>
           </Pressable>
         </View>
       )}
@@ -267,28 +216,6 @@ export default function FamilyScreen() {
         }
         ListFooterComponent={hasMembers ? (
           <View style={s.footer}>
-            {/* GEDCOM import/export */}
-            <View style={s.gedcomRow}>
-              <Pressable
-                style={({ pressed }) => [s.gedBtn, pressed && s.pressed, importing && s.gedBtnDisabled]}
-                onPress={importGedcom}
-                disabled={importing}
-              >
-                {importing
-                  ? <ActivityIndicator size="small" color={Colors.amber} />
-                  : <Text style={s.gedBtnText}>↓ Import GEDCOM</Text>}
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [s.gedBtn, pressed && s.pressed, exporting && s.gedBtnDisabled]}
-                onPress={exportGedcom}
-                disabled={exporting}
-              >
-                {exporting
-                  ? <ActivityIndicator size="small" color={Colors.amber} />
-                  : <Text style={s.gedBtnText}>↑ Export GEDCOM</Text>}
-              </Pressable>
-            </View>
-            {/* QR invite */}
             <Pressable
               style={({ pressed }) => [s.qrBtn, pressed && s.pressed]}
               onPress={() => router.push('/invite-qr')}
@@ -299,7 +226,12 @@ export default function FamilyScreen() {
         ) : null}
       />
 
-      <AddMemberModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+      <Toast visible={!!toast} message={toast} onHide={() => setToast('')} />
+      <AddMemberModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSuccess={name => setToast(`${name} added to your tree ✓`)}
+      />
     </SafeAreaView>
   )
 }
@@ -315,12 +247,13 @@ const s = StyleSheet.create({
   addBtnText:     { ...Typography.label, color: Colors.cream, fontSize: 13 },
 
   // Quick actions
-  quickRow:       { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xl,
-                    marginBottom: Spacing.md },
+  quickActions:   { paddingHorizontal: Spacing.xl, marginBottom: Spacing.md, gap: Spacing.sm },
+  quickRow:       { flexDirection: 'row', gap: Spacing.sm },
   quickBtn:       { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
                     backgroundColor: Colors.cream2, borderRadius: Radius.lg,
                     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
                     borderWidth: 1, borderColor: Colors.border },
+  quickBtnWide:   { flex: 0 },   // overrides flex:1 so it sizes to content in full-width row
   quickBtnIcon:   { fontSize: 16 },
   quickBtnText:   { ...Typography.bodySmall, color: Colors.textMid, flex: 1 },
 
@@ -354,13 +287,8 @@ const s = StyleSheet.create({
   chevron:        { fontSize: 18, color: Colors.textMuted, lineHeight: 24 },
   sep:            { height: 1, backgroundColor: Colors.borderFaint },
 
-  // Footer (GEDCOM + QR)
-  footer:         { marginTop: Spacing.xxl, gap: Spacing.sm },
-  gedcomRow:      { flexDirection: 'row', gap: Spacing.sm },
-  gedBtn:         { flex: 1, height: 44, borderWidth: 1, borderColor: Colors.border,
-                    borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  gedBtnDisabled: { opacity: 0.5 },
-  gedBtnText:     { ...Typography.label, color: Colors.textMid, fontSize: 12 },
+  // Footer
+  footer:         { marginTop: Spacing.xxl },
   qrBtn:          { height: 44, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
                     alignItems: 'center', justifyContent: 'center' },
   qrBtnText:      { ...Typography.label, color: Colors.amber, fontSize: 13 },
