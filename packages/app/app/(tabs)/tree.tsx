@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import Svg, { Circle, Line, Text as SvgText, G, Image as SvgImage, Defs, ClipPath } from 'react-native-svg'
+import Svg, { Circle, Line, Text as SvgText, G } from 'react-native-svg'
 import { buildAdjacency, FamilyGraph, createEngine } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
@@ -344,19 +344,6 @@ export default function TreeScreen() {
         <Animated.View style={[s.svgWrap, animStyle]}>
           <Svg width={CANVAS} height={CANVAS}>
 
-            {/* ── Photo clip paths (one per person with a photo) ── */}
-            <Defs>
-              {Object.values(people).map(person => {
-                const pos = layout.get(person.id)
-                if (!pos || !person.photo) return null
-                return (
-                  <ClipPath key={`clip-${person.id}`} id={`clip-${person.id}`}>
-                    <Circle cx={pos.x} cy={pos.y} r={NODE_R} />
-                  </ClipPath>
-                )
-              })}
-            </Defs>
-
             {/* ── Edges ── */}
             {relationships.map(rel => {
               const a = layout.get(rel.from)
@@ -419,28 +406,16 @@ export default function TreeScreen() {
                     strokeDasharray={isDeceased ? '4,3' : undefined}
                     opacity={isDeceased ? 0.7 : 1}
                   />
-                  {/* Photo fills the circle when available, otherwise show initial */}
-                  {person.photo ? (
-                    <SvgImage
-                      x={pos.x - NODE_R} y={pos.y - NODE_R}
-                      width={NODE_R * 2} height={NODE_R * 2}
-                      href={person.photo}
-                      clipPath={`url(#clip-${person.id})`}
-                      preserveAspectRatio="xMidYMid slice"
-                      opacity={isDeceased ? 0.55 : 1}
-                    />
-                  ) : (
-                    <SvgText
-                      x={pos.x} y={pos.y + 5}
-                      textAnchor="middle"
-                      fill={isMe ? Colors.bark : Colors.sand}
-                      fontSize={15}
-                      fontFamily="DMSans-Medium"
-                      opacity={isDeceased ? 0.55 : 1}
-                    >
-                      {initial}
-                    </SvgText>
-                  )}
+                  <SvgText
+                    x={pos.x} y={pos.y + 5}
+                    textAnchor="middle"
+                    fill={isMe ? Colors.bark : Colors.sand}
+                    fontSize={15}
+                    fontFamily="DMSans-Medium"
+                    opacity={isDeceased ? 0.55 : 1}
+                  >
+                    {initial}
+                  </SvgText>
                   <SvgText
                     x={pos.x} y={pos.y + NODE_R + 15}
                     textAnchor="middle"
