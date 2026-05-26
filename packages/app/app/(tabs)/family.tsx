@@ -12,7 +12,8 @@ import { useFamilyStore } from '../../src/store/familyStore'
 import { useAllRelationships } from '../../src/hooks/useRelationship'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { TreeMark } from '../../src/components/TreeMark'
-import { Person, saveMember, saveRelationship } from '../../src/lib/db'
+import { saveMember, saveRelationship } from '../../src/lib/db'
+import { Person } from '@rootline/engine'
 import { parseGEDCOM, exportGEDCOM } from '../../src/lib/gedcom'
 import { Avatar } from '../../src/components/Avatar'
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/theme'
@@ -196,14 +197,11 @@ export default function FamilyScreen() {
 
       {/* Missing birthday nudge */}
       {missingBirthday > 0 && (
-        <Pressable
-          style={({ pressed }) => [s.nudge, pressed && s.pressed]}
-          onPress={() => router.push('/relate')}
-        >
+        <View style={s.nudge}>
           <Text style={s.nudgeText}>
-            🎂  {missingBirthday} member{missingBirthday > 1 ? 's' : ''} missing a birthday — tap a name to fill it in
+            🎂  {missingBirthday} member{missingBirthday > 1 ? 's are' : ' is'} missing a birthday — tap their name below to add it
           </Text>
-        </Pressable>
+        </View>
       )}
 
       {/* Search bar */}
@@ -353,7 +351,7 @@ const s = StyleSheet.create({
   rel:            { ...Typography.bodySmall, color: Colors.textMuted, marginTop: 2 },
   relMe:          { color: Colors.amber },
   year:           { ...Typography.bodySmall, color: Colors.textMuted, marginRight: Spacing.sm },
-  chevron:        { ...Typography.heading2, color: Colors.textMuted },
+  chevron:        { fontSize: 18, color: Colors.textMuted, lineHeight: 24 },
   sep:            { height: 1, backgroundColor: Colors.borderFaint },
 
   // Footer (GEDCOM + QR)

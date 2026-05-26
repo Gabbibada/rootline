@@ -93,7 +93,7 @@ export default function QuizScreen() {
 
   const next = () => {
     if (!question) return
-    const newAsked = new Set(asked).add(question.correctId)
+    const newAsked  = new Set(asked).add(question.correctId)
     setAsked(newAsked)
     setAnswered(null)
 
@@ -101,9 +101,7 @@ export default function QuizScreen() {
     if (remaining.length === 0) {
       setDone(true)
     } else {
-      // Build next question with updated asked set
-      const nextRemaining = relatives.filter(r => !newAsked.has(r.person.id))
-      const target = pickRandom(nextRemaining)
+      const target = pickRandom(remaining)
       const pool   = allPeople.filter(p => p.id !== target.person.id)
       const wrongs = shuffle(pool).slice(0, 3)
       setQuestion({

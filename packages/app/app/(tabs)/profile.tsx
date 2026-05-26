@@ -55,6 +55,7 @@ export default function ProfileScreen() {
   const [name,       setName]       = useState('')
   const [birthday,   setBirthday]   = useState('')
   const [birthplace, setBirthplace] = useState('')
+  const [occupation, setOccupation] = useState('')
   const [gender,     setGender]     = useState<Gender>('M')
   const [location,   setLocation]   = useState('')
   const [story,      setStory]      = useState('')
@@ -82,6 +83,7 @@ export default function ProfileScreen() {
     setName(me.name)
     setBirthday(me.birthday ?? '')
     setBirthplace(me.birthplace ?? '')
+    setOccupation((me as any).occupation ?? '')
     setGender(me.gender)
     setLocation(me.location ?? '')
     setStory(me.story ?? '')
@@ -112,6 +114,7 @@ export default function ProfileScreen() {
       name:       name.trim(),
       birthday:   birthday || null,
       birthplace: birthplace.trim() || null,
+      occupation: occupation.trim() || null,
       gender,
       location:   location.trim() || null,
       story:      story.trim() || null,
@@ -119,7 +122,7 @@ export default function ProfileScreen() {
     }
 
     updatePerson(currentUserId, updates)
-    saveMember({ ...me, ...updates }).catch(() => undefined)
+    saveMember({ ...me, ...updates } as any).catch(() => undefined)
 
     setSaving(false)
     setEditing(false)
@@ -173,12 +176,13 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          {(me?.birthday || me?.birthplace || me?.gender || me?.location) && (
+          {(me?.birthday || me?.birthplace || me?.gender || me?.location || (me as any)?.occupation) && (
             <View style={s.card}>
-              {me.birthday   && <InfoRow label="Born"       value={formatDate(me.birthday)} />}
-              {me.birthplace && <InfoRow label="Birthplace" value={me.birthplace} />}
-              {me.gender     && <InfoRow label="Gender"     value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[me.gender]} />}
-              {me.location   && <InfoRow label="Location"   value={me.location} />}
+              {me.birthday              && <InfoRow label="Born"       value={formatDate(me.birthday)} />}
+              {me.birthplace            && <InfoRow label="Birthplace" value={me.birthplace} />}
+              {(me as any).occupation   && <InfoRow label="Occupation" value={(me as any).occupation} />}
+              {me.gender                && <InfoRow label="Gender"     value={{ M: 'Man', F: 'Woman', NB: 'Non-binary' }[me.gender]} />}
+              {me.location              && <InfoRow label="Location"   value={me.location} />}
             </View>
           )}
 
@@ -281,6 +285,18 @@ export default function ProfileScreen() {
               value={birthplace}
               onChangeText={setBirthplace}
               placeholder="e.g. Accra, Ghana"
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="words"
+            />
+          </View>
+
+          <View style={s.field}>
+            <Text style={s.label}>Occupation <Text style={s.optional}>(optional)</Text></Text>
+            <TextInput
+              style={s.input}
+              value={occupation}
+              onChangeText={setOccupation}
+              placeholder="e.g. Teacher, Engineer"
               placeholderTextColor={Colors.textMuted}
               autoCapitalize="words"
             />

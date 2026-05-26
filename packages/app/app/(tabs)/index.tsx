@@ -43,7 +43,8 @@ function daysLabel(days: number): string {
 
 function computeGenerationSpan(graph: ReturnType<typeof useFamilyStore>['graph'], rootId: string): number {
   if (!graph) return 1
-  const adj  = buildAdjacency(graph.relationships)
+  const rels = Array.isArray(graph.relationships) ? graph.relationships : []
+  const adj  = buildAdjacency(rels)
   const gen  = new Map<string, number>([[rootId, 0]])
   const queue: Array<{ id: string; g: number }> = [{ id: rootId, g: 0 }]
   while (queue.length) {
