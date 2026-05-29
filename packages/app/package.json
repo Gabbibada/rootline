@@ -17,7 +17,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^8.4.4",
     "@react-native-community/netinfo": "11.4.1",
-    "@rootline/engine": "file:../engine",
+    "@rootline/engine": "file:./vendor/rootline-engine-0.1.0.tgz",
     "@supabase/supabase-js": "^2.43.4",
     "expo": "~54.0.0",
     "expo-constants": "~18.0.13",
