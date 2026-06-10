@@ -8,7 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ErrorBoundary } from '../src/components/ErrorBoundary'
 import { OfflineBanner } from '../src/components/OfflineBanner'
 import { CormorantGaramond_500Medium } from '@expo-google-fonts/cormorant-garamond'
-import { DMSans_400Regular, DMSans_500Medium } from '@expo-google-fonts/dm-sans'
+import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter'
 import { IBMPlexMono_400Regular } from '@expo-google-fonts/ibm-plex-mono'
 import { supabase, getSession } from '../src/lib/supabase'
 import { useFamilyStore } from '../src/store/familyStore'
@@ -32,8 +32,8 @@ export default function RootLayout() {
 
   const [fontsLoaded] = useFonts({
     'CormorantGaramond-Medium': CormorantGaramond_500Medium,
-    'DMSans-Regular':           DMSans_400Regular,
-    'DMSans-Medium':            DMSans_500Medium,
+    'Inter-Regular':            Inter_400Regular,
+    'Inter-Medium':             Inter_500Medium,
     'IBMPlexMono-Regular':      IBMPlexMono_400Regular,
   })
 

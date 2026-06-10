@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -439,7 +439,7 @@ const s = StyleSheet.create({
   pressed:        { opacity: 0.7 },
   avatar:         { flexShrink: 0 },
   rowInfo:        { flex: 1 },
-  rowName:        { fontFamily: 'DMSans-Medium', fontSize: 15, lineHeight: 22, color: Colors.textDark },
+  rowName:        { fontFamily: 'Inter-Medium', fontSize: 15, lineHeight: 22, color: Colors.textDark },
   rowLabel:       { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
   chevron:        { fontSize: 20, color: Colors.textMuted, lineHeight: 24 },
 
@@ -486,7 +486,7 @@ const s = StyleSheet.create({
                     paddingHorizontal: Spacing.lg, gap: Spacing.md },
   actDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.amber, flexShrink: 0 },
   actInfo:        { flex: 1 },
-  actName:        { fontFamily: 'DMSans-Medium', fontSize: 14, color: Colors.textDark },
+  actName:        { fontFamily: 'Inter-Medium', fontSize: 14, color: Colors.textDark },
   actDesc:        { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
   actTime:        { ...Typography.mono, fontSize: 10, color: Colors.textMuted },
 

@@ -507,7 +507,7 @@ const s = StyleSheet.create({
   pathAvatar:    { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bark2, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   pathAvatarYou: { backgroundColor: Colors.amber },
   pathAvatarTarget: { backgroundColor: Colors.bark },
-  pathInitial:   { fontFamily: 'DMSans-Medium', fontSize: 14, color: Colors.sand },
+  pathInitial:   { fontFamily: 'Inter-Medium', fontSize: 14, color: Colors.sand },
   pathName:      { ...Typography.mono, color: Colors.textMuted, fontSize: 9, textAlign: 'center' },
   pathConnector: { alignItems: 'center', paddingHorizontal: Spacing.xs },
   pathConnLabel: { ...Typography.mono, color: Colors.textMuted, fontSize: 8, letterSpacing: 0.4 },
@@ -527,7 +527,7 @@ const s = StyleSheet.create({
   avatarSmallWrap:  { alignSelf: 'center', marginBottom: Spacing.xxl, position: 'relative' },
   avatarSmallImg:   { width: 64, height: 64, borderRadius: 32 },
   photoEditBadge:   { position: 'absolute', bottom: 0, right: 0, backgroundColor: Colors.amber, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  photoEditText:    { fontFamily: 'DMSans-Medium', fontSize: 9, color: Colors.cream, letterSpacing: 0.4 },
+  photoEditText:    { fontFamily: 'Inter-Medium', fontSize: 9, color: Colors.cream, letterSpacing: 0.4 },
 
   // Edit fields
   field:        { marginBottom: Spacing.lg },

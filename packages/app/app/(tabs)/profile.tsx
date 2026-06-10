@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
@@ -97,7 +97,11 @@ export default function ProfileScreen() {
     let photoUrl = me.photo
     if (editPhoto) {
       const uploaded = await uploadPhoto(me.treeId, me.id, editPhoto)
-      if (uploaded) photoUrl = uploaded
+      if (uploaded) {
+        photoUrl = uploaded
+      } else {
+        Alert.alert('Photo upload failed', 'Your other changes were saved, but the photo could not be uploaded. Please check your connection and try again.')
+      }
     }
 
     const updates = {
@@ -383,7 +387,7 @@ const s = StyleSheet.create({
   avatarWrap:     { alignSelf: 'center', marginBottom: Spacing.xxl, position: 'relative' },
   avatarImg:      { width: 72, height: 72, borderRadius: 36 },
   photoBadge:     { position: 'absolute', bottom: 0, right: 0, backgroundColor: Colors.amber, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  photoBadgeText: { fontFamily: 'DMSans-Medium', fontSize: 9, color: Colors.cream, letterSpacing: 0.4 },
+  photoBadgeText: { fontFamily: 'Inter-Medium', fontSize: 9, color: Colors.cream, letterSpacing: 0.4 },
 
   field:          { marginBottom: Spacing.lg },
   label:          { ...Typography.label, color: Colors.textMid, marginBottom: Spacing.xs },

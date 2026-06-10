@@ -14,10 +14,10 @@ export const Typography = {
   heading1:  { fontFamily: 'CormorantGaramond-Medium',  fontSize: 28, lineHeight: 34 },
   heading2:  { fontFamily: 'CormorantGaramond-Medium',  fontSize: 22, lineHeight: 28 },
   nameTag:   { fontFamily: 'CormorantGaramond-Medium',  fontSize: 18, lineHeight: 22 },
-  body:      { fontFamily: 'DMSans-Regular',            fontSize: 15, lineHeight: 22 },
-  bodySmall: { fontFamily: 'DMSans-Regular',            fontSize: 13, lineHeight: 18 },
-  label:     { fontFamily: 'DMSans-Medium',             fontSize: 13, lineHeight: 16 },
-  caption:   { fontFamily: 'DMSans-Regular',            fontSize: 11, lineHeight: 14 },
+  body:      { fontFamily: 'Inter-Regular',            fontSize: 15, lineHeight: 22 },
+  bodySmall: { fontFamily: 'Inter-Regular',            fontSize: 13, lineHeight: 18 },
+  label:     { fontFamily: 'Inter-Medium',             fontSize: 13, lineHeight: 16 },
+  caption:   { fontFamily: 'Inter-Regular',            fontSize: 11, lineHeight: 14 },
   mono:      { fontFamily: 'IBMPlexMono-Regular',       fontSize: 10, lineHeight: 14, letterSpacing: 0.8 },
 } as const
 

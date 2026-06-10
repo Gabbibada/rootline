@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native'
+﻿import { View, Text, StyleSheet } from 'react-native'
 import { Image } from 'expo-image'
 import { Colors } from '../theme'
 
@@ -46,5 +46,5 @@ export function Avatar({ name, photo, size = 44, amber = false, style }: AvatarP
 
 const s = StyleSheet.create({
   base:    { alignItems: 'center', justifyContent: 'center' },
-  initial: { fontFamily: 'DMSans-Medium', color: Colors.sand },
+  initial: { fontFamily: 'Inter-Medium', color: Colors.sand },
 })

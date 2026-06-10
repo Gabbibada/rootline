@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system'
 import { supabase } from './supabase'
 import { FamilyGraph, Person, Relationship } from '@rootline/engine'
 
@@ -114,10 +115,10 @@ export async function loadTreeById(
 
 /**
  * Upload a photo from a local URI to Supabase Storage (bucket: "photos").
- * Returns the public URL, or null if the upload fails.
+ * Returns the public URL (with cache-buster), or null if the upload fails.
  *
- * Prerequisite: create a public bucket named "photos" in Supabase Storage
- * and set a policy: allow authenticated users to insert/update/select.
+ * Uses expo-file-system to read the file as base64 — fetch().blob() is
+ * unreliable with local file URIs in React Native.
  */
 export async function uploadPhoto(
   treeId:   string,
@@ -125,19 +126,25 @@ export async function uploadPhoto(
   uri:      string,
 ): Promise<string | null> {
   try {
-    const ext  = (uri.split('.').pop()?.split('?')[0] ?? 'jpg').toLowerCase()
-    const path = `${treeId}/${personId}.${ext}`
+    const rawExt  = (uri.split('.').pop()?.split('?')[0] ?? 'jpg').toLowerCase()
+    const ext     = rawExt === 'jpg' ? 'jpeg' : rawExt
+    const mime    = `image/${ext}`
+    const path    = `${treeId}/${personId}.${ext}`
 
-    const resp = await fetch(uri)
-    const blob = await resp.blob()
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
 
     const { error } = await supabase.storage
       .from('photos')
-      .upload(path, blob, { upsert: true, contentType: `image/${ext}` })
+      .upload(path, bytes, { upsert: true, contentType: mime })
 
     if (error) return null
 
-    return supabase.storage.from('photos').getPublicUrl(path).data.publicUrl
+    const publicUrl = supabase.storage.from('photos').getPublicUrl(path).data.publicUrl
+    // Cache-buster forces expo-image to re-fetch when the same path is replaced
+    return `${publicUrl}?v=${Date.now()}`
   } catch {
     return null
   }

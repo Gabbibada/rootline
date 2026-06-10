@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Family Quiz screen
  *
  * The relationship engine picks a random relative and asks the user to
@@ -269,8 +269,8 @@ const s = StyleSheet.create({
   choiceCorrect:{ backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
   choiceWrong:  { backgroundColor: '#FFEBEE', borderColor: '#EF5350', opacity: 0.7 },
   choiceName:   { ...Typography.label, color: Colors.textDark, textAlign: 'center' },
-  checkmark:    { fontSize: 18, color: '#4CAF50', fontFamily: 'DMSans-Medium' },
-  cross:        { fontSize: 18, color: '#EF5350', fontFamily: 'DMSans-Medium' },
+  checkmark:    { fontSize: 18, color: '#4CAF50', fontFamily: 'Inter-Medium' },
+  cross:        { fontSize: 18, color: '#EF5350', fontFamily: 'Inter-Medium' },
   pressed:      { opacity: 0.75 },
 
   nextBtn:     { height: 52, backgroundColor: Colors.amber, borderRadius: Radius.md,

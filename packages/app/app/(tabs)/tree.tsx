@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useState } from 'react'
+﻿import { useMemo, useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, useWindowDimensions,
   Animated, PanResponder, Pressable, TextInput,
@@ -373,7 +373,7 @@ export default function TreeScreen() {
                     textAnchor="middle"
                     fill={isMe ? Colors.bark : Colors.sand}
                     fontSize={15}
-                    fontFamily="DMSans-Medium"
+                    fontFamily="Inter-Medium"
                     opacity={isDeceased ? 0.55 : 1}
                   >
                     {initial}
@@ -383,7 +383,7 @@ export default function TreeScreen() {
                     textAnchor="middle"
                     fill={Colors.sand}
                     fontSize={11}
-                    fontFamily="DMSans-Regular"
+                    fontFamily="Inter-Regular"
                     opacity={isDeceased ? 0.45 : 0.85}
                   >
                     {isDeceased ? `${firstName} †` : firstName}
@@ -492,6 +492,7 @@ export default function TreeScreen() {
           <Text style={s.legendLabel}>Deceased</Text>
         </View>
       </View>
+
     </SafeAreaView>
   )
 }
@@ -512,24 +513,24 @@ const s = StyleSheet.create({
   // Search
   searchContainer:      { position: 'absolute', top: HEADER_H + Spacing.md, left: Spacing.xl, right: Spacing.xl },
   searchBtn:            { alignSelf: 'flex-end', width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.bark2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bark3, ...Shadow.card },
-  searchBtnText:        { fontFamily: 'DMSans-Regular', fontSize: 20, color: Colors.sand, lineHeight: 26 },
+  searchBtnText:        { fontFamily: 'Inter-Regular', fontSize: 20, color: Colors.sand, lineHeight: 26 },
   searchPanel:          { backgroundColor: Colors.bark2, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.bark3, overflow: 'hidden', ...Shadow.strong },
   searchRow:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  searchInput:          { flex: 1, height: 44, fontFamily: 'DMSans-Regular', fontSize: 15, color: Colors.sand },
+  searchInput:          { flex: 1, height: 44, fontFamily: 'Inter-Regular', fontSize: 15, color: Colors.sand },
   searchClose:          { paddingHorizontal: Spacing.xs },
-  searchCloseText:      { fontFamily: 'DMSans-Regular', fontSize: 14, color: Colors.textMuted },
+  searchCloseText:      { fontFamily: 'Inter-Regular', fontSize: 14, color: Colors.textMuted },
   searchResults:        { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.bark3 },
   searchResultRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
   searchResultBorder:   { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.bark3 },
   searchResultPressed:  { backgroundColor: Colors.bark3 },
-  searchResultName:     { fontFamily: 'DMSans-Regular', fontSize: 15, color: Colors.sand },
+  searchResultName:     { fontFamily: 'Inter-Regular', fontSize: 15, color: Colors.sand },
   searchResultYear:     { fontFamily: 'IBMPlexMono-Regular', fontSize: 10, color: Colors.textMuted, letterSpacing: 0.8 },
-  searchNoResults:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontFamily: 'DMSans-Regular', fontSize: 13, color: Colors.textMuted },
+  searchNoResults:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontFamily: 'Inter-Regular', fontSize: 13, color: Colors.textMuted },
 
   // Zoom controls
   zoomControls:   { position: 'absolute', bottom: 120, right: Spacing.xl, gap: Spacing.xs },
   zoomBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.bark2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bark3, ...Shadow.card },
-  zoomText:       { fontFamily: 'DMSans-Medium', fontSize: 22, color: Colors.sand, lineHeight: 28 },
+  zoomText:       { fontFamily: 'Inter-Medium', fontSize: 22, color: Colors.sand, lineHeight: 28 },
 
   // Legend
   legend:         { position: 'absolute', bottom: 32, left: Spacing.xl, backgroundColor: Colors.bark2, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: Spacing.xs, ...Shadow.card },
