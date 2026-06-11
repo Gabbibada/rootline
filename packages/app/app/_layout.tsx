@@ -52,10 +52,22 @@ export default function RootLayout() {
   }, [graph, currentUserId])
 
   useEffect(() => {
-    getSession().then(({ data }) => {
-      setAuthed(!!data.session)
+    getSession()
+      .then(({ data }) => {
+        setAuthed(!!data.session)
+        setAuthReady(true)
+      })
+      .catch(() => {
+        // Network unavailable on cold start — treat as unauthenticated
+        setAuthed(false)
+        setAuthReady(true)
+      })
+
+    // Failsafe: never leave the splash up more than 10 seconds
+    const timeout = setTimeout(() => {
+      setAuthed(false)
       setAuthReady(true)
-    })
+    }, 10_000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setAuthed(!!session)
@@ -64,7 +76,10 @@ export default function RootLayout() {
         router.replace('/onboarding')
       }
     })
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
