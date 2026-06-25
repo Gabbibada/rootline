@@ -9,7 +9,6 @@ import { Colors, Typography, Spacing, Radius } from '../../src/theme'
 const GENDERS: { label: string; value: Gender }[] = [
   { label: 'Man',        value: 'M'  },
   { label: 'Woman',      value: 'F'  },
-  { label: 'Non-binary', value: 'NB' },
 ]
 
 function StepDots({ current }: { current: 1 | 2 }) {

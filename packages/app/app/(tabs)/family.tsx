@@ -220,7 +220,7 @@ export default function FamilyScreen() {
               style={({ pressed }) => [s.qrBtn, pressed && s.pressed]}
               onPress={() => router.push('/invite-qr')}
             >
-              <Text style={s.qrBtnText}>Share QR invite code</Text>
+              <Text style={s.qrBtnText}>Invite family to your tree</Text>
             </Pressable>
           </View>
         ) : null}

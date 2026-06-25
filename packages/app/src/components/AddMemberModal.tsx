@@ -21,7 +21,6 @@ type RelChoice = 'parent' | 'child' | 'sibling' | 'spouse'
 const GENDERS: { label: string; value: Gender }[] = [
   { label: 'Man',        value: 'M'  },
   { label: 'Woman',      value: 'F'  },
-  { label: 'Non-binary', value: 'NB' },
 ]
 
 const REL_OPTIONS: { label: string; value: RelChoice }[] = [
