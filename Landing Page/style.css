@@ -37,14 +37,14 @@ nav.scrolled {
   border-bottom: 1px solid rgba(176,125,74,0.12);
 }
 .nav-logo {
-  display: inline-flex; align-items: center; gap: 0.55rem;
+  display: inline-flex; align-items: center;
   font-family: var(--display);
   font-size: 1.5rem; font-weight: 500;
   color: var(--cream); text-decoration: none;
   letter-spacing: 0.01em;
 }
 .nav-logo span { color: var(--amber); }
-.logo-mark { height: 1.5em; width: auto; display: block; }
+.logo-mark { height: 1.5em; width: auto; display: block; margin-right: 0.5rem; }
 .nav-links { display: flex; gap: 2.25rem; list-style: none; align-items: center; }
 .nav-links a {
   font-size: 0.8125rem; font-weight: 400;
@@ -389,7 +389,7 @@ footer {
 footer a { color: rgba(232,201,154,0.45); text-decoration: none; }
 footer a:hover { color: var(--sand); }
 .foot-logo {
-  display: inline-flex; align-items: center; gap: 0.5rem;
+  display: inline-flex; align-items: center;
   font-family: var(--display); font-size: 1.2rem;
   color: rgba(247,240,230,0.6);
 }
