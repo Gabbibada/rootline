@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="rootline-mark.svg">
+  <title>Delete Your Account — Rootline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bark:  #1C1008;
+      --amber: #B07D4A;
+      --sand:  #E8C99A;
+      --cream: #F7F0E6;
+      --cream2:#EDE4D8;
+      --ink:   #2A1C10;
+      --muted: #6B5A48;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 64px 24px 96px; }
+    header.brand {
+      display: flex; align-items: center; gap: 14px;
+      padding-bottom: 28px; margin-bottom: 40px;
+      border-bottom: 1px solid var(--cream2);
+    }
+    header.brand .logo {
+      display: inline-flex; align-items: center; text-decoration: none;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 30px; font-weight: 600; color: var(--bark);
+      letter-spacing: 0.2px;
+    }
+    header.brand .logo span { color: var(--amber); }
+    header.brand .logo-mark { height: 1.2em; width: auto; margin-right: 10px; }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 44px; line-height: 1.15;
+      color: var(--bark); margin: 0 0 6px;
+    }
+    .effective { color: var(--muted); font-size: 15px; margin: 0 0 40px; }
+    h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 27px; color: var(--bark);
+      margin: 44px 0 12px;
+    }
+    p { margin: 0 0 16px; }
+    ul, ol { margin: 0 0 16px; padding-left: 22px; }
+    li { margin-bottom: 8px; }
+    a { color: var(--amber); }
+    strong { color: var(--bark); }
+    .lead {
+      font-size: 19px; color: var(--ink);
+      background: var(--cream2);
+      border-left: 3px solid var(--amber);
+      padding: 18px 22px; border-radius: 8px; margin-bottom: 8px;
+    }
+    .email-cta {
+      display: inline-block; margin: 4px 0 8px;
+      font-size: 20px; font-weight: 500; color: var(--bark);
+    }
+    footer {
+      margin-top: 64px; padding-top: 28px;
+      border-top: 1px solid var(--cream2);
+      color: var(--muted); font-size: 14px;
+    }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="brand">
+      <a href="index.html" class="logo"><img class="logo-mark" src="rootline-mark.svg" alt="" aria-hidden="true">Root<span>line</span></a>
+    </header>
+
+    <h1>Delete Your Account</h1>
+    <p class="effective">Rootline — account &amp; data deletion</p>
+
+    <p class="lead">
+      You can ask us to permanently delete your Rootline account and the personal
+      data associated with it at any time. This page explains how to make the
+      request and exactly what is removed.
+    </p>
+
+    <h2>How to request deletion</h2>
+    <ol>
+      <li>From the email address associated with your Rootline account, email
+        us at the address below.</li>
+      <li>Use the subject line <strong>"Delete my account"</strong>.</li>
+      <li>We will verify the request, permanently delete your account and data,
+        and email you to confirm — normally within <strong>30 days</strong>.</li>
+    </ol>
+
+    <a class="email-cta" href="mailto:rootline@gabbibada.com?subject=Delete%20my%20account">rootline@gabbibada.com</a>
+
+    <h2>What gets deleted</h2>
+    <p>When you delete your account, we permanently remove:</p>
+    <ul>
+      <li>Your login credentials (email address and password).</li>
+      <li>Your profile information (name, nickname, date of birth, birthplace, occupation, location, gender, and story).</li>
+      <li>The family members and tree data you created.</li>
+      <li>Photos you uploaded.</li>
+      <li>Your notification preferences.</li>
+    </ul>
+
+    <h2>What we keep</h2>
+    <p>
+      We do not retain your personal data after deletion, except where we are
+      legally required to keep limited records. Any such data is removed once the
+      legal obligation ends. We never keep your data for marketing — Rootline has
+      no ads and does not sell personal information.
+    </p>
+
+    <h2>Delete data without closing your account</h2>
+    <p>
+      If you would rather keep your account, you can delete individual people,
+      photos, and details directly in the app at any time. To remove everything,
+      use the email request above.
+    </p>
+
+    <footer>
+      Questions? Email <a href="mailto:rootline@gabbibada.com">rootline@gabbibada.com</a>.
+      See also our <a href="privacy.html">Privacy Policy</a>.
+    </footer>
+  </div>
+</body>
+</html>
