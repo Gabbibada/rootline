@@ -90,7 +90,10 @@ export default function RootLayout() {
       if (authed) {
         const pending = await loadPendingInvite()
         if (pending) {
-          router.replace({ pathname: '/invite', params: { treeId: pending.treeId, personId: pending.personId, name: pending.personName } } as any)
+          const params: Record<string, string> = { treeId: pending.treeId }
+          if (pending.personId)   params.personId = pending.personId
+          if (pending.personName) params.name     = pending.personName
+          router.replace({ pathname: '/invite', params } as any)
           SplashScreen.hideAsync()
           return
         }

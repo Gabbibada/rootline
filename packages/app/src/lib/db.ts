@@ -170,8 +170,16 @@ export async function uploadPhoto(
   }
 }
 
-export async function claimMember(personId: string, userId: string): Promise<void> {
-  await supabase.from('members').update({ user_id: userId }).eq('id', personId)
+/**
+ * Link the signed-in auth user to a member row via the claim_member RPC.
+ * A direct UPDATE would be blocked by RLS for fresh invitees (they aren't a
+ * claimed member of the tree yet); the security-definer RPC validates and
+ * performs the claim server-side. Throws on failure (e.g. already claimed).
+ */
+export async function claimMember(personId: string): Promise<{ treeId: string; treeName: string }> {
+  const { data, error } = await supabase.rpc('claim_member', { member_id: personId })
+  if (error) throw error
+  return data as { treeId: string; treeName: string }
 }
 
 export function subscribeToTree(treeId: string, onUpdate: (graph: FamilyGraph) => void) {

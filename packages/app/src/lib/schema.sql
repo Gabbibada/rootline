@@ -320,6 +320,47 @@ as $$
 $$;
 
 
+-- ── Migration: claim_member RPC ───────────────────────────────────────────────
+-- Run in Supabase SQL Editor (safe to re-run).
+--
+-- Invitees hit an RLS chicken-and-egg: reading a tree or updating a member
+-- requires already being a claimed member of that tree, so a fresh invitee
+-- could never claim. This security-definer RPC performs the claim with
+-- validation, then normal RLS applies (they're a claimed member now).
+
+create or replace function claim_member(member_id uuid)
+returns json
+language plpgsql
+security definer
+as $$
+declare
+  m      members%rowtype;
+  t_name text;
+begin
+  if auth.uid() is null then
+    raise exception 'not_authenticated';
+  end if;
+
+  select * into m from members where id = member_id;
+  if not found then
+    raise exception 'member_not_found';
+  end if;
+
+  if m.user_id is not null and m.user_id <> auth.uid() then
+    raise exception 'already_claimed';
+  end if;
+
+  update members set user_id = auth.uid() where id = member_id;
+
+  select name into t_name from trees where id = m.tree_id;
+  return json_build_object('treeId', m.tree_id, 'treeName', t_name);
+end;
+$$;
+
+revoke execute on function claim_member(uuid) from anon;
+grant  execute on function claim_member(uuid) to authenticated;
+
+
 -- ── Storage: photos bucket ────────────────────────────────────────────────────
 
 insert into storage.buckets (id, name, public)

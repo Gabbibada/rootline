@@ -4,8 +4,8 @@ const KEY = 'rootline_pending_invite'
 
 export interface PendingInvite {
   treeId:     string
-  personId:   string
-  personName: string
+  personId:   string | null   // null for tree-only (QR) invites — invitee picks their profile
+  personName: string | null
 }
 
 export function buildInviteUrl(treeId: string, personId: string, personName: string): string {

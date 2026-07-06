@@ -66,7 +66,7 @@ export default function TreeScreen() {
       // find them on future sign-ins — losing it silently strands the account.
       persist(async () => {
         await saveMember(person)
-        if (user) await claimMember(personId, user.id)
+        if (user) await claimMember(personId)
       }, 'Your family tree')
 
       router.replace('/(tabs)/')
