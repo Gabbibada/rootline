@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Pla
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../src/lib/supabase'
-import { createTree, saveMember, claimMember } from '../../src/lib/db'
+import { createTree, persist, saveMember, claimMember } from '../../src/lib/db'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { Gender, Person } from '@rootline/engine'
 import { Colors, Typography, Spacing, Radius } from '../../src/theme'
@@ -40,7 +40,9 @@ export default function TreeScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const personId = uid()
-      const treeId   = user ? await createTree(treeName.trim(), user.id).catch(() => uid()) : uid()
+      // If createTree fails we must NOT fall back to a local-only id: nothing
+      // would ever sync for this user again. Let it throw into the catch below.
+      const treeId   = user ? await createTree(treeName.trim(), user.id) : uid()
 
       const person: Person = {
         id:         personId,
@@ -59,10 +61,13 @@ export default function TreeScreen() {
 
       initGraph(person, treeName.trim())
 
-      // Best-effort Supabase save — not blocking
-      saveMember(person).catch(() => undefined)
-      // Link the auth user to their member row so loadUserTree can find them on future sign-ins
-      if (user) claimMember(personId, user.id).catch(() => undefined)
+      // Optimistic save; persist retries and alerts if the cloud write fails.
+      // The claim links the auth user to their member row so loadUserTree can
+      // find them on future sign-ins — losing it silently strands the account.
+      persist(async () => {
+        await saveMember(person)
+        if (user) await claimMember(personId, user.id)
+      }, 'Your family tree')
 
       router.replace('/(tabs)/')
     } catch {

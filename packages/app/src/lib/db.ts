@@ -1,6 +1,28 @@
-import * as FileSystem from 'expo-file-system'
+import { Alert } from 'react-native'
+import { File } from 'expo-file-system'
 import { supabase } from './supabase'
 import { FamilyGraph, Person, Relationship } from '@rootline/engine'
+
+/**
+ * Fire-and-forget cloud persist with retry. The store is already updated
+ * optimistically; this makes sure the write actually reaches Supabase and
+ * tells the user when it doesn't, instead of silently losing the data.
+ */
+export function persist(op: () => Promise<unknown>, what: string): void {
+  const attempt = (retriesLeft: number) => {
+    op().catch(() => {
+      if (retriesLeft > 0) {
+        setTimeout(() => attempt(retriesLeft - 1), 3000)
+      } else {
+        Alert.alert(
+          'Not saved to the cloud',
+          `${what} couldn't be saved to the cloud. Check your connection, then edit and save again.`,
+        )
+      }
+    })
+  }
+  attempt(2)
+}
 
 export async function createTree(name: string, ownerId: string): Promise<string> {
   const { data, error } = await supabase
@@ -117,8 +139,9 @@ export async function loadTreeById(
  * Upload a photo from a local URI to Supabase Storage (bucket: "photos").
  * Returns the public URL (with cache-buster), or null if the upload fails.
  *
- * Uses expo-file-system to read the file as base64 — fetch().blob() is
- * unreliable with local file URIs in React Native.
+ * Uses the SDK 54 expo-file-system File API — the legacy readAsStringAsync
+ * export throws a deprecation error, and fetch().blob() is unreliable with
+ * local file URIs in React Native.
  */
 export async function uploadPhoto(
   treeId:   string,
@@ -131,14 +154,11 @@ export async function uploadPhoto(
     const mime    = `image/${ext}`
     const path    = `${treeId}/${personId}.${ext}`
 
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    })
-    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    const buffer = await new File(uri).arrayBuffer()
 
     const { error } = await supabase.storage
       .from('photos')
-      .upload(path, bytes, { upsert: true, contentType: mime })
+      .upload(path, buffer, { upsert: true, contentType: mime })
 
     if (error) return null
 

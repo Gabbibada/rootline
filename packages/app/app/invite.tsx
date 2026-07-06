@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { getSession } from '../src/lib/supabase'
-import { loadTreeById, claimMember } from '../src/lib/db'
+import { loadTreeById, claimMember, persist } from '../src/lib/db'
 import { savePendingInvite, clearPendingInvite } from '../src/lib/invite'
 import { useFamilyStore } from '../src/store/familyStore'
 import { Colors, Typography, Spacing, Radius } from '../src/theme'
@@ -41,7 +41,7 @@ export default function InviteScreen() {
       if (!treeData) { setError('Could not load this family tree.'); setClaiming(false); return }
 
       loadGraph(treeData.graph, treeData.treeName, personId!)
-      claimMember(personId!, data.session.user.id).catch(() => undefined)
+      persist(() => claimMember(personId!, data.session.user.id), 'Your profile claim')
       await clearPendingInvite()
       router.replace('/(tabs)/')
     } catch {

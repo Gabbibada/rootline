@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Gender, Direction, RelationshipPath, Person } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { useRelationship } from '../../src/hooks/useRelationship'
-import { saveMember, deleteMember, uploadPhoto } from '../../src/lib/db'
+import { persist, saveMember, deleteMember, uploadPhoto } from '../../src/lib/db'
 import { buildInviteUrl } from '../../src/lib/invite'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
 import { Avatar } from '../../src/components/Avatar'
@@ -144,7 +144,11 @@ export default function MemberScreen() {
     let photoUrl = member.photo
     if (editPhoto) {
       const uploaded = await uploadPhoto(member.treeId, member.id, editPhoto)
-      if (uploaded) photoUrl = uploaded
+      if (uploaded) {
+        photoUrl = uploaded
+      } else {
+        Alert.alert('Photo upload failed', 'Your other changes were saved, but the photo could not be uploaded. Please check your connection and try again.')
+      }
     }
 
     const updates = {
@@ -161,7 +165,7 @@ export default function MemberScreen() {
       photo:      photoUrl,
     }
     updatePerson(id!, updates)
-    saveMember({ ...member, ...updates }).catch(() => undefined)
+    persist(() => saveMember({ ...member, ...updates }), name.trim())
     logActivity('updated', { id: id!, name: name.trim() })
     setSaving(false)
     setEditing(false)
@@ -201,7 +205,7 @@ export default function MemberScreen() {
           style: 'destructive',
           onPress: () => {
             removePerson(id!)
-            deleteMember(id!).catch(() => undefined)
+            persist(() => deleteMember(id!), `Removing ${member.name}`)
             router.back()
           },
         },

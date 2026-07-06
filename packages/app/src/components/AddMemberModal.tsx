@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { Gender, Person, Relationship } from '@rootline/engine'
 import { useFamilyStore } from '../store/familyStore'
-import { saveMember, saveRelationship } from '../lib/db'
+import { persist, saveMember, saveRelationship } from '../lib/db'
 import { DatePickerField } from './DatePickerField'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 
@@ -112,9 +112,12 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
     addPerson(newPerson)
     if (rel) storeAddRel(rel)
 
-    // Best-effort Supabase persist — don't block UI
-    saveMember(newPerson).catch(() => undefined)
-    if (rel) saveRelationship(rel).catch(() => undefined)
+    // Optimistic UI; persist retries in the background and alerts on failure
+    const relToSave = rel
+    persist(async () => {
+      await saveMember(newPerson)
+      if (relToSave) await saveRelationship(relToSave)
+    }, newPerson.name)
 
     setLoading(false)
     onSuccess?.(name.trim())

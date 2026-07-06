@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Gender } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { signOut } from '../../src/lib/supabase'
-import { saveMember, uploadPhoto } from '../../src/lib/db'
+import { persist, saveMember, uploadPhoto } from '../../src/lib/db'
 import {
   getNotificationPermissionStatus,
   scheduleAllBirthdayNotifications,
@@ -115,7 +115,7 @@ export default function ProfileScreen() {
     }
 
     updatePerson(currentUserId, updates)
-    saveMember({ ...me, ...updates } as any).catch(() => undefined)
+    persist(() => saveMember({ ...me, ...updates } as any), 'Your profile')
 
     setSaving(false)
     setEditing(false)
