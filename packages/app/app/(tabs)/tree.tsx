@@ -119,6 +119,7 @@ export default function TreeScreen() {
   const [searchOpen,  setSearchOpen]  = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [addModal,    setAddModal]    = useState(false)
+  const [legendOpen,  setLegendOpen]  = useState(true)
 
   // Pan/zoom using React Native's built-in Animated + PanResponder
   // (no reanimated needed — compatible with Expo Go)
@@ -477,21 +478,32 @@ export default function TreeScreen() {
         </Pressable>
       </View>
 
-      {/* Legend */}
-      <View style={s.legend}>
-        <View style={s.legendRow}>
+      {/* Legend — tap to minimize so it never blocks the tree */}
+      {legendOpen ? (
+        <Pressable style={({ pressed }) => [s.legend, pressed && s.legendPressed]} onPress={() => setLegendOpen(false)}>
+          <View style={s.legendHeader}>
+            <Text style={s.legendTitle}>LEGEND</Text>
+            <Text style={s.legendCollapse}>−</Text>
+          </View>
+          <View style={s.legendRow}>
+            <View style={s.legendDot} />
+            <Text style={s.legendLabel}>You</Text>
+          </View>
+          <View style={s.legendRow}>
+            <View style={s.legendDash} />
+            <Text style={s.legendLabel}>Spouse</Text>
+          </View>
+          <View style={s.legendRow}>
+            <View style={s.legendDeceased} />
+            <Text style={s.legendLabel}>Deceased</Text>
+          </View>
+        </Pressable>
+      ) : (
+        <Pressable style={({ pressed }) => [s.legend, s.legendChip, pressed && s.legendPressed]} onPress={() => setLegendOpen(true)}>
           <View style={s.legendDot} />
-          <Text style={s.legendLabel}>You</Text>
-        </View>
-        <View style={s.legendRow}>
-          <View style={s.legendDash} />
-          <Text style={s.legendLabel}>Spouse</Text>
-        </View>
-        <View style={s.legendRow}>
-          <View style={s.legendDeceased} />
-          <Text style={s.legendLabel}>Deceased</Text>
-        </View>
-      </View>
+          <Text style={s.legendLabel}>Legend</Text>
+        </Pressable>
+      )}
 
     </SafeAreaView>
   )
@@ -534,6 +546,11 @@ const s = StyleSheet.create({
 
   // Legend
   legend:         { position: 'absolute', bottom: 32, left: Spacing.xl, backgroundColor: Colors.bark2, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: Spacing.xs, ...Shadow.card },
+  legendPressed:  { opacity: 0.8 },
+  legendChip:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  legendHeader:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md, marginBottom: 2 },
+  legendTitle:    { ...Typography.mono, fontSize: 9, color: Colors.sand, opacity: 0.6, letterSpacing: 1 },
+  legendCollapse: { ...Typography.body, color: Colors.sand, opacity: 0.6, fontSize: 14, lineHeight: 14 },
   legendRow:      { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   legendDot:      { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.amber },
   legendDash:     { width: 16, height: 0, borderTopWidth: 1.5, borderTopColor: Colors.amber, borderStyle: 'dashed' },
