@@ -13,7 +13,8 @@ any two people in a family tree and returns the shortest relationship path plus
 a human-readable label ("Your uncle", "Your first cousin once removed").
 
 The brand uses the **Warm Earth palette** (#1C1008 bark, #B07D4A amber, #F7F0E6 cream)
-with **Cormorant Garamond** for display and **DM Sans** for body text.
+with **Inter** for all UI text (SemiBold display/headings, Medium labels, Regular body)
+and **IBM Plex Mono** for meta accents.
 
 ---
 
@@ -94,10 +95,10 @@ sand:   '#E8C99A'   // text on dark
 cream:  '#F7F0E6'   // light background
 
 // Fonts
-'CormorantGaramond-Medium'  // display, names
-'DMSans-Regular'            // body
-'DMSans-Medium'             // buttons
-'IBMPlexMono-Regular'       // mono/meta
+'Inter-SemiBold'       // display, headings
+'Inter-Medium'         // names, buttons, labels
+'Inter-Regular'        // body
+'IBMPlexMono-Regular'  // mono/meta
 ```
 
 ---

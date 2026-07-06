@@ -7,8 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ErrorBoundary } from '../src/components/ErrorBoundary'
 import { OfflineBanner } from '../src/components/OfflineBanner'
-import { CormorantGaramond_500Medium } from '@expo-google-fonts/cormorant-garamond'
-import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter'
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter'
 import { IBMPlexMono_400Regular } from '@expo-google-fonts/ibm-plex-mono'
 import { supabase, getSession } from '../src/lib/supabase'
 import { useFamilyStore } from '../src/store/familyStore'
@@ -31,10 +30,10 @@ export default function RootLayout() {
   const didRedirect = useRef(false)
 
   const [fontsLoaded] = useFonts({
-    'CormorantGaramond-Medium': CormorantGaramond_500Medium,
-    'Inter-Regular':            Inter_400Regular,
-    'Inter-Medium':             Inter_500Medium,
-    'IBMPlexMono-Regular':      IBMPlexMono_400Regular,
+    'Inter-Regular':       Inter_400Regular,
+    'Inter-Medium':        Inter_500Medium,
+    'Inter-SemiBold':      Inter_600SemiBold,
+    'IBMPlexMono-Regular': IBMPlexMono_400Regular,
   })
 
   useEffect(() => { setupNotificationChannel() }, [])

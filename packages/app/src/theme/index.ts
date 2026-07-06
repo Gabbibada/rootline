@@ -10,10 +10,10 @@ export const Colors = {
 } as const
 
 export const Typography = {
-  display:   { fontFamily: 'CormorantGaramond-Medium',  fontSize: 36, lineHeight: 42 },
-  heading1:  { fontFamily: 'CormorantGaramond-Medium',  fontSize: 28, lineHeight: 34 },
-  heading2:  { fontFamily: 'CormorantGaramond-Medium',  fontSize: 22, lineHeight: 28 },
-  nameTag:   { fontFamily: 'CormorantGaramond-Medium',  fontSize: 18, lineHeight: 22 },
+  display:   { fontFamily: 'Inter-SemiBold', fontSize: 32, lineHeight: 40 },
+  heading1:  { fontFamily: 'Inter-SemiBold', fontSize: 26, lineHeight: 32 },
+  heading2:  { fontFamily: 'Inter-Medium',   fontSize: 20, lineHeight: 26 },
+  nameTag:   { fontFamily: 'Inter-Medium',   fontSize: 17, lineHeight: 22 },
   body:      { fontFamily: 'Inter-Regular',            fontSize: 15, lineHeight: 22 },
   bodySmall: { fontFamily: 'Inter-Regular',            fontSize: 13, lineHeight: 18 },
   label:     { fontFamily: 'Inter-Medium',             fontSize: 13, lineHeight: 16 },
