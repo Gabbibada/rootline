@@ -10,13 +10,14 @@ import { FamilyGraph, Person, Relationship } from '@rootline/engine'
  */
 export function persist(op: () => Promise<unknown>, what: string): void {
   const attempt = (retriesLeft: number) => {
-    op().catch(() => {
+    op().catch((e: unknown) => {
       if (retriesLeft > 0) {
         setTimeout(() => attempt(retriesLeft - 1), 3000)
       } else {
+        const detail = e instanceof Error ? e.message : String(e)
         Alert.alert(
           'Not saved to the cloud',
-          `${what} couldn't be saved to the cloud. Check your connection, then edit and save again.`,
+          `${what} couldn't be saved to the cloud. Check your connection, then edit and save again.\n\nDetails: ${detail}`,
         )
       }
     })
