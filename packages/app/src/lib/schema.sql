@@ -320,6 +320,86 @@ as $$
 $$;
 
 
+-- ── Migration: fix RLS infinite recursion (42P17) ─────────────────────────────
+-- Run in Supabase SQL Editor (safe to re-run).
+--
+-- The members policies subquery members itself, and trees/members policies
+-- reference each other, so Postgres detected policy recursion and rejected
+-- EVERY write to members/relationships. Security-definer helpers bypass RLS
+-- inside the policy check, breaking the cycle.
+
+create or replace function owned_tree_ids()
+returns setof uuid
+language sql
+security definer
+stable
+as $$
+  select id from trees where owner_id = auth.uid()
+$$;
+
+create or replace function claimed_tree_ids()
+returns setof uuid
+language sql
+security definer
+stable
+as $$
+  select tree_id from members where user_id = auth.uid()
+$$;
+
+-- trees ------------------------------------------------------------------
+drop policy if exists "Claimed members can read tree" on trees;
+create policy "Claimed members can read tree"
+  on trees for select
+  to authenticated
+  using (id in (select claimed_tree_ids()));
+
+-- members ----------------------------------------------------------------
+drop policy if exists "Tree members can read members"   on members;
+drop policy if exists "Tree members can insert members" on members;
+drop policy if exists "Tree members can update members" on members;
+drop policy if exists "Tree members can delete members" on members;
+
+create policy "Tree members can read members"
+  on members for select
+  to authenticated
+  using (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+create policy "Tree members can insert members"
+  on members for insert
+  to authenticated
+  with check (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+create policy "Tree members can update members"
+  on members for update
+  to authenticated
+  using (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+create policy "Tree members can delete members"
+  on members for delete
+  to authenticated
+  using (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+-- relationships ------------------------------------------------------------
+drop policy if exists "Tree members can read relationships"   on relationships;
+drop policy if exists "Tree members can insert relationships" on relationships;
+drop policy if exists "Tree members can delete relationships" on relationships;
+
+create policy "Tree members can read relationships"
+  on relationships for select
+  to authenticated
+  using (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+create policy "Tree members can insert relationships"
+  on relationships for insert
+  to authenticated
+  with check (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+create policy "Tree members can delete relationships"
+  on relationships for delete
+  to authenticated
+  using (tree_id in (select owned_tree_ids()) or tree_id in (select claimed_tree_ids()));
+
+
 -- ── Migration: claim_member RPC ───────────────────────────────────────────────
 -- Run in Supabase SQL Editor (safe to re-run).
 --
