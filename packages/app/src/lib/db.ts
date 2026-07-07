@@ -14,7 +14,11 @@ export function persist(op: () => Promise<unknown>, what: string): void {
       if (retriesLeft > 0) {
         setTimeout(() => attempt(retriesLeft - 1), 3000)
       } else {
-        const detail = e instanceof Error ? e.message : String(e)
+        // Supabase errors are plain objects (PostgrestError), not Error instances
+        const err = e as { message?: string; code?: string; details?: string } | null
+        const detail = err?.message
+          ? `${err.message}${err.code ? ` (${err.code})` : ''}${err.details ? ` — ${err.details}` : ''}`
+          : JSON.stringify(e)
         Alert.alert(
           'Not saved to the cloud',
           `${what} couldn't be saved to the cloud. Check your connection, then edit and save again.\n\nDetails: ${detail}`,
