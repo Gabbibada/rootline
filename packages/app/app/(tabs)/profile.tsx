@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Gender } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { signOut } from '../../src/lib/supabase'
-import { persist, saveMember, uploadPhoto } from '../../src/lib/db'
+import { persist, saveMember, uploadPhoto, syncTreeToCloud } from '../../src/lib/db'
 import {
   getNotificationPermissionStatus,
   scheduleAllBirthdayNotifications,
@@ -40,6 +40,7 @@ export default function ProfileScreen() {
 
   const [editing,     setEditing]     = useState(false)
   const [saving,      setSaving]      = useState(false)
+  const [syncing,     setSyncing]     = useState(false)
   const [notifStatus, setNotifStatus] = useState<string | null>(null)
   const [toast,       setToast]       = useState(false)
 
@@ -139,6 +140,23 @@ export default function ProfileScreen() {
     }
   }
 
+  const backUpTree = async () => {
+    if (!graph || !currentUserId || syncing) return
+    setSyncing(true)
+    try {
+      const res = await syncTreeToCloud(graph, treeName, currentUserId)
+      Alert.alert(
+        'Backup complete',
+        `${res.members} member${res.members === 1 ? '' : 's'} and ${res.relationships} relationship${res.relationships === 1 ? '' : 's'} are safely in the cloud.`,
+      )
+    } catch (e) {
+      const err = e as { message?: string } | null
+      Alert.alert('Backup failed', err?.message ?? String(e))
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const handleSignOut = () => {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -202,6 +220,16 @@ export default function ProfileScreen() {
               />
             </View>
           </View>
+
+          <Pressable
+            style={({ pressed }) => [s.syncBtn, pressed && s.pressed]}
+            onPress={backUpTree}
+            disabled={syncing}
+          >
+            {syncing
+              ? <ActivityIndicator color={Colors.amber} size="small" />
+              : <Text style={s.syncText}>Back up tree to cloud</Text>}
+          </Pressable>
 
           <Pressable
             style={({ pressed }) => [s.signOutBtn, pressed && s.pressed]}
@@ -402,6 +430,8 @@ const s = StyleSheet.create({
 
   // Shared
   pressed:        { opacity: 0.7 },
-  signOutBtn:     { height: 52, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xl },
+  syncBtn:        { height: 52, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xl },
+  syncText:       { ...Typography.label, color: Colors.amber, fontSize: 15 },
+  signOutBtn:     { height: 52, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.md },
   signOutText:    { ...Typography.label, color: Colors.error, fontSize: 15 },
 })

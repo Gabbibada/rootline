@@ -187,6 +187,70 @@ export async function claimMember(personId: string): Promise<{ treeId: string; t
   return data as { treeId: string; treeName: string }
 }
 
+/**
+ * One-shot repair/backup: push the entire on-device tree to Supabase.
+ * Recovers accounts whose cloud writes silently failed (e.g. the RLS
+ * recursion bug): ensures the tree row exists and is owned by the signed-in
+ * user, bulk-upserts every member and relationship, and claims the user's
+ * own member row. Idempotent — safe to run repeatedly.
+ */
+export async function syncTreeToCloud(
+  graph:           FamilyGraph,
+  treeName:        string | null,
+  currentPersonId: string,
+): Promise<{ members: number; relationships: number }> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const treeId = graph.people[currentPersonId]?.treeId
+  if (!treeId) throw new Error('No tree found on this device')
+
+  // 1. Tree row — must exist and be owned before member inserts pass RLS
+  const { error: treeErr } = await supabase
+    .from('trees')
+    .upsert({ id: treeId, name: treeName ?? 'Family Tree', owner_id: user.id })
+  if (treeErr) throw treeErr
+
+  // 2. Members (tree_id normalised so stray local ids can't fail RLS)
+  const memberRows = Object.values(graph.people).map(p => ({
+    id:         p.id,
+    tree_id:    treeId,
+    name:       p.name,
+    nickname:   p.nickname,
+    gender:     p.gender,
+    birthday:   p.birthday,
+    birthplace: p.birthplace,
+    death_date: p.deathDate,
+    photo:      p.photo,
+    location:   p.location,
+    occupation: (p as any).occupation ?? null,
+    story:      p.story,
+    deceased:   p.deceased,
+  }))
+  const { error: mErr } = await supabase.from('members').upsert(memberRows)
+  if (mErr) throw mErr
+
+  // 3. Relationships
+  const rels = Array.isArray(graph.relationships) ? graph.relationships : []
+  if (rels.length) {
+    const relRows = rels.map(r => ({
+      id:      r.id,
+      tree_id: treeId,
+      from_id: r.from,
+      to_id:   r.to,
+      type:    r.type,
+      subtype: r.subtype,
+    }))
+    const { error: rErr } = await supabase.from('relationships').upsert(relRows)
+    if (rErr) throw rErr
+  }
+
+  // 4. Link the auth user to their own member row
+  await claimMember(currentPersonId)
+
+  return { members: memberRows.length, relationships: rels.length }
+}
+
 export function subscribeToTree(treeId: string, onUpdate: (graph: FamilyGraph) => void) {
   return supabase
     .channel(`tree:${treeId}`)
