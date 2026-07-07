@@ -9,6 +9,7 @@ import Svg, { Circle, Line, Text as SvgText, G } from 'react-native-svg'
 import { buildAdjacency, FamilyGraph, createEngine } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
 import { AddMemberModal } from '../../src/components/AddMemberModal'
+import { FocusView } from '../../src/components/FocusView'
 import { TreeMark } from '../../src/components/TreeMark'
 import { Colors, Typography, Spacing, Shadow, Radius } from '../../src/theme'
 
@@ -120,6 +121,8 @@ export default function TreeScreen() {
   const [searchQuery, setSearchQuery] = useState('')
   const [addModal,    setAddModal]    = useState(false)
   const [legendOpen,  setLegendOpen]  = useState(true)
+  const [mode,        setMode]        = useState<'map' | 'focus'>('map')
+  const [addPivotId,  setAddPivotId]  = useState<string | null>(null)
 
   // Pan/zoom using React Native's built-in Animated + PanResponder
   // (no reanimated needed — compatible with Expo Go)
@@ -301,8 +304,32 @@ export default function TreeScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Tree</Text>
+        <View style={s.modeToggle}>
+          {(['map', 'focus'] as const).map(m => (
+            <Pressable
+              key={m}
+              style={[s.modeBtn, mode === m && s.modeBtnActive]}
+              onPress={() => setMode(m)}
+            >
+              <Text style={[s.modeBtnText, mode === m && s.modeBtnTextActive]}>
+                {m === 'map' ? 'Map' : 'Focus'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
+      {mode === 'focus' && (
+        <FocusView
+          graph={graph}
+          currentUserId={currentUserId!}
+          labelMap={labelMap}
+          onOpenProfile={id => router.push(`/member/${id}`)}
+          onAddRelative={id => setAddPivotId(id)}
+        />
+      )}
+
+      {mode === 'map' && (<>
       <View style={s.canvas} {...panResponder.panHandlers}>
         <Animated.View style={[s.svgWrap, animStyle]}>
           <Svg width={CANVAS} height={CANVAS}>
@@ -504,6 +531,13 @@ export default function TreeScreen() {
           <Text style={s.legendLabel}>Legend</Text>
         </Pressable>
       )}
+      </>)}
+
+      <AddMemberModal
+        visible={addPivotId !== null}
+        onClose={() => setAddPivotId(null)}
+        pivotId={addPivotId ?? undefined}
+      />
 
     </SafeAreaView>
   )
@@ -511,8 +545,13 @@ export default function TreeScreen() {
 
 const s = StyleSheet.create({
   safe:           { flex: 1, backgroundColor: Colors.bark },
-  header:         { height: HEADER_H, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg },
+  header:         { height: HEADER_H, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg },
   title:          { ...Typography.heading1, color: Colors.cream },
+  modeToggle:     { flexDirection: 'row', backgroundColor: Colors.bark2, borderWidth: 1, borderColor: Colors.bark3, borderRadius: Radius.full, padding: 2, marginBottom: 2 },
+  modeBtn:        { paddingHorizontal: Spacing.md, paddingVertical: 5, borderRadius: Radius.full },
+  modeBtnActive:  { backgroundColor: Colors.amber },
+  modeBtnText:    { ...Typography.label, fontSize: 12, color: Colors.sand },
+  modeBtnTextActive: { color: Colors.cream },
   empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   emptyTitle:     { ...Typography.heading2, color: Colors.cream, marginTop: Spacing.xl, textAlign: 'center' },
   emptyBody:      { ...Typography.body, color: Colors.sand, opacity: 0.65, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 24 },
