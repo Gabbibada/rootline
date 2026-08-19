@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import QRCode from 'react-native-qrcode-svg'
 import { useFamilyStore } from '../src/store/familyStore'
+import { buildInviteUrl } from '../src/lib/invite'
 import { Colors, Typography, Spacing, Radius, Shadow } from '../src/theme'
 
 export default function InviteQRScreen() {
@@ -18,9 +19,10 @@ export default function InviteQRScreen() {
   const me            = currentUserId ? graph?.people[currentUserId] : null
   const treeId        = me?.treeId
 
-  // Deep link — handled by the rootline:// scheme defined in app.json
+  // Hosted invite page — opens in any browser/messenger, then hands off to
+  // the app via intent:// (or shows a Google Play fallback).
   const inviteUrl     = treeId
-    ? `rootline://invite?treeId=${treeId}`
+    ? buildInviteUrl(treeId)
     : null
 
   const shareLink = async () => {

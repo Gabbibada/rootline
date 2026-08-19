@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="rootline-mark.svg">
+  <title>You're invited — Rootline</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bark:  #1C1008;
+      --amber: #B07D4A;
+      --sand:  #E8C99A;
+      --cream: #F7F0E6;
+      --cream2:#EDE4D8;
+      --ink:   #2A1C10;
+      --muted: #6B5A48;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .wrap {
+      max-width: 480px; margin: 0 auto; padding: 48px 24px 64px;
+      flex: 1; display: flex; flex-direction: column;
+    }
+    header.brand {
+      display: flex; align-items: center; justify-content: center;
+      padding-bottom: 32px;
+    }
+    header.brand .logo {
+      display: inline-flex; align-items: center; text-decoration: none;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 30px; font-weight: 600; color: var(--bark);
+      letter-spacing: 0.2px;
+    }
+    header.brand .logo span { color: var(--amber); }
+    header.brand .logo-mark { height: 1.2em; width: auto; margin-right: 10px; }
+    .card {
+      background: #FFFDF9;
+      border: 1px solid var(--cream2);
+      border-radius: 16px;
+      padding: 36px 28px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(28, 16, 8, 0.07);
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 34px; line-height: 1.15;
+      color: var(--bark); margin: 0 0 10px;
+    }
+    .sub { color: var(--muted); font-size: 16px; margin: 0 0 28px; }
+    .sub strong { color: var(--bark); }
+    .btn {
+      display: block; width: 100%;
+      border: none; cursor: pointer; text-decoration: none;
+      border-radius: 12px; padding: 15px 20px;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 16px; font-weight: 500;
+      text-align: center;
+    }
+    .btn-primary { background: var(--amber); color: var(--cream); margin-bottom: 12px; }
+    .btn-primary:active { opacity: 0.85; }
+    .btn-secondary {
+      background: transparent; color: var(--amber);
+      border: 1.5px solid var(--amber);
+    }
+    .hint { color: var(--muted); font-size: 14px; margin: 24px 0 0; line-height: 1.6; }
+    .ios-note {
+      display: none;
+      background: var(--cream2); border-radius: 10px;
+      padding: 14px 16px; margin-top: 20px;
+      font-size: 14px; color: var(--muted); text-align: left;
+    }
+    footer {
+      text-align: center; color: var(--muted); font-size: 13px;
+      padding: 28px 24px 0; margin-top: auto;
+    }
+    footer a { color: var(--amber); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="brand">
+      <a href="index.html" class="logo"><img class="logo-mark" src="rootline-mark.svg" alt="" aria-hidden="true">Root<span>line</span></a>
+    </header>
+
+    <div class="card">
+      <h1 id="headline">You're invited</h1>
+      <p class="sub" id="subline">Join your family's tree on Rootline.</p>
+
+      <a class="btn btn-primary" id="openBtn" href="#">Open in the Rootline app</a>
+      <a class="btn btn-secondary" href="https://play.google.com/apps/internaltest/4701740405694497663">Get Rootline on Google Play</a>
+
+      <p class="hint" id="hint">
+        Already have the app? Tap <strong>Open in the Rootline app</strong> and your
+        invite will be waiting. Don't have it yet? Install it from Google Play first,
+        then come back to this link.
+      </p>
+
+      <div class="ios-note" id="iosNote">
+        Rootline is currently in testing on <strong>Android</strong> only.
+        The iPhone version is coming soon — ask the person who invited you
+        to add your details in the meantime, so your spot is ready.
+      </div>
+    </div>
+
+    <footer>
+      © 2026 Rootline · <a href="privacy.html">Privacy</a>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var params   = new URLSearchParams(window.location.search)
+      var treeId   = params.get('treeId')
+      var name     = params.get('name')
+      var query    = window.location.search || ''
+      var playUrl  = 'https://play.google.com/apps/internaltest/4701740405694497663'
+
+      // Personalise the card when we know who was invited
+      if (name) {
+        document.getElementById('headline').textContent = 'Welcome, ' + name
+        document.getElementById('subline').innerHTML =
+          'A spot on the family tree is waiting for <strong>you</strong>.'
+      }
+
+      // No treeId means the link is broken — keep the page useful anyway
+      if (!treeId) {
+        document.getElementById('subline').textContent =
+          'This invite link is missing its details. Ask your family member to share it again.'
+      }
+
+      var ua        = navigator.userAgent || ''
+      var isAndroid = /Android/i.test(ua)
+      var isIOS     = /iPhone|iPad|iPod/i.test(ua)
+
+      // The app's deep link (rootline:// scheme registered in app.json)
+      var deepLink = 'rootline://invite' + query
+
+      // Android intent:// URL — opens the app if installed, otherwise
+      // Chrome follows browser_fallback_url (Google Play).
+      var intentUrl =
+        'intent://invite' + query +
+        '#Intent;scheme=rootline;package=com.gabbibada.rootline;' +
+        'S.browser_fallback_url=' + encodeURIComponent(playUrl) + ';end'
+
+      var openBtn = document.getElementById('openBtn')
+
+      function openApp() {
+        if (isAndroid) {
+          // intent:// is the reliable path in Chrome; some in-app browsers
+          // (WhatsApp, Instagram) only honour the plain scheme, so try both.
+          window.location.href = intentUrl
+          setTimeout(function () { window.location.href = deepLink }, 700)
+        } else {
+          window.location.href = deepLink
+        }
+      }
+
+      openBtn.addEventListener('click', function (e) {
+        e.preventDefault()
+        openApp()
+      })
+
+      if (isIOS) {
+        document.getElementById('iosNote').style.display = 'block'
+      }
+
+      // Auto-attempt on Android so one tap on the shared link is enough
+      if (isAndroid && treeId) {
+        setTimeout(openApp, 400)
+      }
+    })()
+  </script>
+</body>
+</html>

@@ -8,8 +8,16 @@ export interface PendingInvite {
   personName: string | null
 }
 
-export function buildInviteUrl(treeId: string, personId: string, personName: string): string {
-  return `rootline://invite?treeId=${treeId}&personId=${personId}&name=${encodeURIComponent(personName)}`
+// Hosted invite page (site/invite.html on GitHub Pages). A plain rootline://
+// link is not tappable in WhatsApp/SMS/email; this https page opens the app
+// via an Android intent:// redirect and falls back to Google Play.
+const INVITE_PAGE = 'https://gabbibada.github.io/rootline/invite.html'
+
+export function buildInviteUrl(treeId: string, personId?: string | null, personName?: string | null): string {
+  let url = `${INVITE_PAGE}?treeId=${encodeURIComponent(treeId)}`
+  if (personId)   url += `&personId=${encodeURIComponent(personId)}`
+  if (personName) url += `&name=${encodeURIComponent(personName)}`
+  return url
 }
 
 export async function savePendingInvite(invite: PendingInvite): Promise<void> {
