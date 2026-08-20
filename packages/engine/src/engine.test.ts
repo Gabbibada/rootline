@@ -107,6 +107,64 @@ describe('Birthday notifications', () => {
   test('1 day',   () => expect(engine.getBirthdayNotification('you','gma',1)).toBe("Grandma Risi's birthday is in 1 day — your grandmother"))
 })
 
+describe('Non-canonical paths — the mislabelled-mother regression', () => {
+  // Real tester bug: mum was wired as the brother's parent but not Janet's,
+  // so Janet's shortest path to her own mother was [up,down,up] — and the
+  // old u/d counting called her mother "Your sister". Paths that climb
+  // again after descending have no honest kinship name.
+  const g: FamilyGraph = {
+    people: {
+      dad:   makePerson('dad',   'Emmanuel', 'M'),
+      mum:   makePerson('mum',   'Modupe',   'F'),
+      gma:   makePerson('gma',   'Lydia',    'F'),
+      bro:   makePerson('bro',   'Gabriel',  'M'),
+      janet: makePerson('janet', 'Janet',    'F'),
+    },
+    relationships: [
+      makeParent('dad', 'bro'), makeParent('dad', 'janet'),
+      makeParent('mum', 'bro'), makeParent('gma', 'mum'),
+    ],
+  }
+  test('mother reachable only via sibling is never "sister"', () => {
+    const r = createEngine(g).getRelationship('janet', 'mum')
+    expect(r.found && r.path.steps.map((s: any) => s.direction)).toEqual(['up', 'down', 'up'])
+    expect(r.found && r.path.label).toBe('Your relative')
+  })
+  test('grandmother reachable only via sibling is never "sister"', () => {
+    const r = createEngine(g).getRelationship('janet', 'gma')
+    expect(r.found && r.path.label).toBe('Your relative')
+  })
+})
+
+describe('In-law and step labels', () => {
+  const g: FamilyGraph = {
+    people: {
+      you:     makePerson('you',     'Gabriel', 'M'),
+      wife:    makePerson('wife',    'Emiola',  'F'),
+      wmum:    makePerson('wmum',    'Elizabeth', 'F'),
+      dad:     makePerson('dad',     'Emmanuel', 'M'),
+      stepmum: makePerson('stepmum', 'Grace',   'F'),
+      sis:     makePerson('sis',     'Janet',   'F'),
+      sishub:  makePerson('sishub',  'Tunde',   'M'),
+      dau:     makePerson('dau',     'Joanna',  'F'),
+      dauhub:  makePerson('dauhub',  'Seun',    'M'),
+    },
+    relationships: [
+      makeSpouse('you', 'wife'),
+      makeParent('wmum', 'wife'),
+      makeParent('dad', 'you'), makeParent('dad', 'sis'),
+      makeSpouse('dad', 'stepmum'),
+      makeSpouse('sis', 'sishub'),
+      makeParent('you', 'dau'),
+      makeSpouse('dau', 'dauhub'),
+    ],
+  }
+  test("wife's mother is mother-in-law",     () => { const r = createEngine(g).getRelationship('you', 'wmum');   expect(r.found && r.path.label).toBe('Your mother-in-law') })
+  test("father's spouse is step-mother",     () => { const r = createEngine(g).getRelationship('you', 'stepmum'); expect(r.found && r.path.label).toBe('Your step-mother') })
+  test("sister's husband is brother-in-law", () => { const r = createEngine(g).getRelationship('you', 'sishub'); expect(r.found && r.path.label).toBe('Your brother-in-law') })
+  test("daughter's husband is son-in-law",   () => { const r = createEngine(g).getRelationship('you', 'dauhub'); expect(r.found && r.path.label).toBe('Your son-in-law') })
+})
+
 describe('Non-binary gender', () => {
   test('NB parent', () => {
     const g: FamilyGraph = {

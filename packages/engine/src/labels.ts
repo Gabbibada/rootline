@@ -1,31 +1,4 @@
-import { Direction, EdgeSubtype, Gender, Person, TraversalStep } from './types'
-
-interface PathPattern {
-  upsBeforePivot:  number
-  downsAfterPivot: number
-  totalUps:        number
-  totalDowns:      number
-  hasSpouse:       boolean
-  spousePosition:  'start' | 'middle' | 'end' | 'none'
-  subtypes:        EdgeSubtype[]
-}
-
-function analysePattern(steps: TraversalStep[]): PathPattern {
-  const dirs     = steps.map(s => s.direction)
-  const subtypes = steps.map(s => s.subtype)
-  const totalUps    = dirs.filter(d => d === 'up').length
-  const totalDowns  = dirs.filter(d => d === 'down').length
-  const hasSpouse   = dirs.includes('spouse')
-  const pivotIndex  = dirs.findIndex(d => d !== 'up')
-  const upsBeforePivot  = pivotIndex === -1 ? dirs.length : pivotIndex
-  const downsAfterPivot = pivotIndex === -1 ? 0 : dirs.slice(pivotIndex).filter(d => d === 'down').length
-  const spouseIdx = dirs.indexOf('spouse')
-  let spousePosition: PathPattern['spousePosition'] = 'none'
-  if (spouseIdx === 0)                     spousePosition = 'start'
-  else if (spouseIdx === dirs.length - 1) spousePosition = 'end'
-  else if (spouseIdx > 0)                 spousePosition = 'middle'
-  return { upsBeforePivot, downsAfterPivot, totalUps, totalDowns, hasSpouse, spousePosition, subtypes }
-}
+import { Gender, Person, TraversalStep } from './types'
 
 function pick(gender: Gender, male: string, female: string, nb?: string): string {
   if (gender === 'M') return male
@@ -42,50 +15,68 @@ function ordinal(n: number): string { return ORDINALS[n] ?? n + 'th' }
 
 export function generateLabel(steps: TraversalStep[], target: Person): string {
   const gender = target.gender
-  const p      = analysePattern(steps)
-  const { upsBeforePivot: u, downsAfterPivot: d, hasSpouse } = p
-
   if (steps.length === 0) return 'You'
 
-  if (hasSpouse && steps.length === 1) return pick(gender, 'Your husband', 'Your wife', 'Your spouse')
+  const dirs = steps.map(s => s.direction)
+  if (dirs.length === 1 && dirs[0] === 'spouse')
+    return pick(gender, 'Your husband', 'Your wife', 'Your spouse')
 
-  const isInLaw = p.spousePosition === 'start'
+  // The u/d kinship formula is only valid for canonical paths: an optional
+  // spouse hop at either end, then all ups followed by all downs. Anything
+  // else — e.g. [up,down,up] through a half-sibling or a missing parent
+  // link — must NOT be forced into the formula: that's how a mother got
+  // labelled "Your sister" when her own parent edge was missing.
+  const leadSpouse = dirs[0] === 'spouse'
+  const tailSpouse = dirs[dirs.length - 1] === 'spouse'
+  const core       = dirs.slice(leadSpouse ? 1 : 0, dirs.length - (tailSpouse ? 1 : 0))
+  const firstDown  = core.indexOf('down')
+  const canonical  =
+    !core.includes('spouse') &&
+    (firstDown === -1 || core.slice(firstDown).every(dir => dir === 'down'))
 
-  if (d === 0 && !hasSpouse) {
-    if (u === 1) return `Your ${pick(gender, 'father', 'mother', 'parent')}`
-    if (u === 2) return `Your ${pick(gender, 'grandfather', 'grandmother', 'grandparent')}`
-    return `Your ${greatPrefix(u - 2)}grand${pick(gender, 'father', 'mother', 'parent')}`
+  if (!canonical || (leadSpouse && tailSpouse)) return 'Your relative'
+
+  const u = firstDown === -1 ? core.length : firstDown
+  const d = core.length - u
+
+  // Straight up — ancestors, their spouses, or your spouse's ancestors
+  if (d === 0 && u > 0) {
+    const base =
+      u === 1 ? pick(gender, 'father', 'mother', 'parent') :
+      u === 2 ? `grand${pick(gender, 'father', 'mother', 'parent')}` :
+                `${greatPrefix(u - 2)}grand${pick(gender, 'father', 'mother', 'parent')}`
+    if (leadSpouse) return `Your ${base}-in-law`   // spouse's parent
+    if (tailSpouse) return `Your step-${base}`     // parent's spouse
+    return `Your ${base}`
   }
 
-  if (u === 0 && !hasSpouse) {
-    if (d === 1) return `Your ${pick(gender, 'son', 'daughter', 'child')}`
-    if (d === 2) return `Your grand${pick(gender, 'son', 'daughter', 'child')}`
-    return `Your ${greatPrefix(d - 2)}grand${pick(gender, 'son', 'daughter', 'child')}`
+  // Straight down — descendants, their spouses, or your spouse's children
+  if (u === 0 && d > 0) {
+    const base =
+      d === 1 ? pick(gender, 'son', 'daughter', 'child') :
+      d === 2 ? `grand${pick(gender, 'son', 'daughter', 'child')}` :
+                `${greatPrefix(d - 2)}grand${pick(gender, 'son', 'daughter', 'child')}`
+    if (leadSpouse) return `Your step-${base}`     // spouse's child
+    if (tailSpouse) return `Your ${base}-in-law`   // child's spouse
+    return `Your ${base}`
   }
 
-  const il = isInLaw ? '-in-law' : ''
+  // Up then down — collateral lines
+  const il = leadSpouse || tailSpouse ? '-in-law' : ''
   if (u === 1 && d === 1) return `Your ${pick(gender, 'brother', 'sister', 'sibling')}${il}`
-  if (u === 2 && d === 1) return `Your ${pick(gender, 'uncle', 'aunt')}${il}`
-  if (u === 1 && d === 2) return `Your ${pick(gender, 'nephew', 'niece')}`
-  if (u === 2 && d === 2) return 'Your first cousin'
-  if (u === 3 && d === 1) return `Your great-${pick(gender, 'uncle', 'aunt')}`
-  if (u === 1 && d === 3) return `Your grand-${pick(gender, 'nephew', 'niece')}`
-  if (u === 3 && d === 2) return 'Your first cousin once removed'
-  if (u === 2 && d === 3) return 'Your first cousin once removed'
-  if (u === 3 && d === 3) return 'Your second cousin'
-  if (u === 4 && d === 1) return `Your great-great-${pick(gender, 'uncle', 'aunt')}`
-  if (u === 4 && d === 4) return 'Your third cousin'
+  if (u === 2 && d === 1) return `Your ${pick(gender, 'uncle', 'aunt')}${leadSpouse ? '-in-law' : ''}`
+  if (u === 1 && d === 2) return `Your ${pick(gender, 'nephew', 'niece')}${leadSpouse ? '-in-law' : ''}`
+  if (d === 1 && u >= 3)  return `Your ${'great-'.repeat(u - 2)}${pick(gender, 'uncle', 'aunt')}`
+  if (u === 1 && d >= 3)  return `Your ${'great-'.repeat(d - 3)}grand-${pick(gender, 'nephew', 'niece')}`
 
   if (u >= 2 && d >= 2) {
-    const smaller  = Math.min(u, d)
-    const degree   = smaller - 1
-    const removed  = Math.abs(u - d)
-    const degStr   = ordinal(degree)
-    if (removed === 0) return `Your ${degStr} cousin`
-    return `Your ${degStr} cousin ${removed} time${removed > 1 ? 's' : ''} removed`
+    const degree  = Math.min(u, d) - 1
+    const removed = Math.abs(u - d)
+    if (removed === 0) return `Your ${ordinal(degree)} cousin`
+    return `Your ${ordinal(degree)} cousin ${removed} time${removed > 1 ? 's' : ''} removed`
   }
 
-  return `Your relative (${u}↑ ${d}↓)`
+  return 'Your relative'
 }
 
 export function generateDescription(
