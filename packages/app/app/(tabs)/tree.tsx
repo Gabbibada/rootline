@@ -304,18 +304,25 @@ export default function TreeScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Tree</Text>
-        <View style={s.modeToggle}>
-          {(['map', 'focus'] as const).map(m => (
-            <Pressable
-              key={m}
-              style={[s.modeBtn, mode === m && s.modeBtnActive]}
-              onPress={() => setMode(m)}
-            >
-              <Text style={[s.modeBtnText, mode === m && s.modeBtnTextActive]}>
-                {m === 'map' ? 'Map' : 'Focus'}
-              </Text>
+        <View style={s.headerRight}>
+          <View style={s.modeToggle}>
+            {(['map', 'focus'] as const).map(m => (
+              <Pressable
+                key={m}
+                style={[s.modeBtn, mode === m && s.modeBtnActive]}
+                onPress={() => setMode(m)}
+              >
+                <Text style={[s.modeBtnText, mode === m && s.modeBtnTextActive]}>
+                  {m === 'map' ? 'Map' : 'Focus'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          {mode === 'map' && (
+            <Pressable style={s.searchBtn} onPress={() => setSearchOpen(true)} hitSlop={6}>
+              <Text style={s.searchBtnText}>⌕</Text>
             </Pressable>
-          ))}
+          )}
         </View>
       </View>
 
@@ -436,10 +443,9 @@ export default function TreeScreen() {
         </Animated.View>
       </View>
 
-      {/* Search overlay */}
-      {layout && (
+      {/* Search overlay — opened from the header search button */}
+      {layout && searchOpen && (
         <View style={s.searchContainer} pointerEvents="box-none">
-          {searchOpen ? (
             <View style={s.searchPanel}>
               <View style={s.searchRow}>
                 <TextInput
@@ -487,11 +493,6 @@ export default function TreeScreen() {
                 </View>
               )}
             </View>
-          ) : (
-            <Pressable style={s.searchBtn} onPress={() => setSearchOpen(true)}>
-              <Text style={s.searchBtnText}>⌕</Text>
-            </Pressable>
-          )}
         </View>
       )}
 
@@ -547,7 +548,8 @@ const s = StyleSheet.create({
   safe:           { flex: 1, backgroundColor: Colors.bark },
   header:         { height: HEADER_H, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg },
   title:          { ...Typography.heading1, color: Colors.cream },
-  modeToggle:     { flexDirection: 'row', backgroundColor: Colors.bark2, borderWidth: 1, borderColor: Colors.bark3, borderRadius: Radius.full, padding: 2, marginBottom: 2 },
+  headerRight:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 2 },
+  modeToggle:     { flexDirection: 'row', backgroundColor: Colors.bark2, borderWidth: 1, borderColor: Colors.bark3, borderRadius: Radius.full, padding: 2 },
   modeBtn:        { paddingHorizontal: Spacing.md, paddingVertical: 5, borderRadius: Radius.full },
   modeBtnActive:  { backgroundColor: Colors.amber },
   modeBtnText:    { ...Typography.label, fontSize: 12, color: Colors.sand },
@@ -563,8 +565,8 @@ const s = StyleSheet.create({
 
   // Search
   searchContainer:      { position: 'absolute', top: HEADER_H + Spacing.md, left: Spacing.xl, right: Spacing.xl },
-  searchBtn:            { alignSelf: 'flex-end', width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.bark2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bark3, ...Shadow.card },
-  searchBtnText:        { fontFamily: 'Inter-Regular', fontSize: 20, color: Colors.sand, lineHeight: 26 },
+  searchBtn:            { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.bark2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bark3 },
+  searchBtnText:        { fontFamily: 'Inter-Regular', fontSize: 17, color: Colors.sand, lineHeight: 21 },
   searchPanel:          { backgroundColor: Colors.bark2, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.bark3, overflow: 'hidden', ...Shadow.strong },
   searchRow:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   searchInput:          { flex: 1, height: 44, fontFamily: 'Inter-Regular', fontSize: 15, color: Colors.sand },

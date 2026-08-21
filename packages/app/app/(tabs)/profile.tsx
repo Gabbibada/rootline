@@ -8,7 +8,7 @@ import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
 import { Gender } from '@rootline/engine'
 import { useFamilyStore } from '../../src/store/familyStore'
-import { signOut } from '../../src/lib/supabase'
+import { signOut, supabase } from '../../src/lib/supabase'
 import { persist, saveMember, uploadPhoto, syncTreeToCloud } from '../../src/lib/db'
 import {
   getNotificationPermissionStatus,
@@ -43,6 +43,10 @@ export default function ProfileScreen() {
   const [syncing,     setSyncing]     = useState(false)
   const [notifStatus, setNotifStatus] = useState<string | null>(null)
   const [toast,       setToast]       = useState(false)
+  // "Back up tree to cloud" is an owner-only repair tool — for a claimed
+  // member in someone else's tree the trees upsert is (correctly) blocked
+  // by RLS, so don't offer the button at all.
+  const [ownsTree,    setOwnsTree]    = useState(false)
 
   // Edit fields
   const [name,       setName]       = useState('')
@@ -58,6 +62,19 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!editing) getNotificationPermissionStatus().then(s => setNotifStatus(s))
   }, [editing])
+
+  useEffect(() => {
+    let cancelled = false
+    const treeId = me?.treeId
+    if (!treeId) { setOwnsTree(false); return }
+    Promise.all([
+      supabase.auth.getUser(),
+      supabase.from('trees').select('owner_id').eq('id', treeId).single(),
+    ]).then(([{ data: auth }, { data: tree }]) => {
+      if (!cancelled) setOwnsTree(!!auth.user && !!tree && tree.owner_id === auth.user.id)
+    }).catch(() => { if (!cancelled) setOwnsTree(false) })
+    return () => { cancelled = true }
+  }, [me?.treeId])
 
   const toggleNotifications = async () => {
     if (!graph || !currentUserId) return
@@ -221,15 +238,17 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <Pressable
-            style={({ pressed }) => [s.syncBtn, pressed && s.pressed]}
-            onPress={backUpTree}
-            disabled={syncing}
-          >
-            {syncing
-              ? <ActivityIndicator color={Colors.amber} size="small" />
-              : <Text style={s.syncText}>Back up tree to cloud</Text>}
-          </Pressable>
+          {ownsTree && (
+            <Pressable
+              style={({ pressed }) => [s.syncBtn, pressed && s.pressed]}
+              onPress={backUpTree}
+              disabled={syncing}
+            >
+              {syncing
+                ? <ActivityIndicator color={Colors.amber} size="small" />
+                : <Text style={s.syncText}>Back up tree to cloud</Text>}
+            </Pressable>
+          )}
 
           <Pressable
             style={({ pressed }) => [s.signOutBtn, pressed && s.pressed]}
