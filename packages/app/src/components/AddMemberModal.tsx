@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   View, Text, TextInput, Pressable, Modal, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
 } from 'react-native'
 import { Gender, Person, Relationship } from '@rootline/engine'
 import { useFamilyStore } from '../store/familyStore'
 import { persist, saveMember, saveRelationship } from '../lib/db'
 import { DatePickerField } from './DatePickerField'
+import { Avatar } from './Avatar'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 
 function uid() {
@@ -47,6 +48,10 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
   const [relChoice, setRelChoice] = useState<RelChoice>('parent')
   const [error,     setError]     = useState('')
   const [loading,   setLoading]   = useState(false)
+  // When set, we link this existing member instead of creating a new person —
+  // prevents duplicate people and missing shared edges (the "mother wired to
+  // only one sibling" class of bug).
+  const [linkedId,  setLinkedId]  = useState<string | null>(null)
 
   // The person this new member is being added relative to
   const effectivePivotId = pivotId ?? currentUserId
@@ -59,25 +64,77 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
     : []
   const siblingAvailable = pivotParentIds.length > 0
 
+  // Existing members matching the typed name — offered as link targets so
+  // family already in the tree isn't re-created as a duplicate person.
+  const suggestions = useMemo(() => {
+    const q = name.trim().toLowerCase()
+    if (!graph || linkedId || q.length < 2) return []
+    return Object.values(graph.people)
+      .filter(p => p.id !== effectivePivotId && p.name.toLowerCase().includes(q))
+      .slice(0, 4)
+  }, [name, graph, linkedId, effectivePivotId])
+
+  const linked = linkedId ? graph?.people[linkedId] ?? null : null
+
+  const rels = graph?.relationships ?? []
+  const edgeExists = (from: string, to: string, type: 'parent' | 'spouse') =>
+    rels.some(r => r.type === type && (
+      type === 'spouse'
+        ? (r.from === from && r.to === to) || (r.from === to && r.to === from)
+        : r.from === from && r.to === to))
+
+  // True when candidate is in root's descendant line (parent edges only)
+  const isDescendant = (candidate: string, root: string): boolean => {
+    const queue = [root]
+    const seen  = new Set([root])
+    while (queue.length) {
+      const cur = queue.shift()!
+      for (const r of rels) {
+        if (r.type !== 'parent' || r.from !== cur || seen.has(r.to)) continue
+        if (r.to === candidate) return true
+        seen.add(r.to)
+        queue.push(r.to)
+      }
+    }
+    return false
+  }
+
   const reset = () => {
     setName('')
     setBirthday('')
     setGender('M')
     setRelChoice('parent')
     setError('')
+    setLinkedId(null)
   }
 
   const close = () => { reset(); onClose() }
 
-  const submit = async () => {
-    setError('')
-    if (!name.trim()) { setError('Please enter a name.'); return }
-    if (!me || !effectivePivotId) { setError('No current user found.'); return }
-    if (relChoice === 'sibling' && !siblingAvailable) {
-      setError(`Add a parent first to connect siblings.`); return
-    }
+  const buildRel = (targetId: string): Relationship | null => {
+    const treeId = me!.treeId
+    // parent edge: from = parent, to = child
+    if (relChoice === 'parent')  return { id: uid(), from: targetId,          to: effectivePivotId!, type: 'parent', subtype: 'biological', treeId }
+    if (relChoice === 'child')   return { id: uid(), from: effectivePivotId!, to: targetId,          type: 'parent', subtype: 'biological', treeId }
+    // Sibling = child of pivot's first parent — engine derives sibling from shared parent
+    if (relChoice === 'sibling') return { id: uid(), from: pivotParentIds[0], to: targetId,          type: 'parent', subtype: 'biological', treeId }
+    if (relChoice === 'spouse')  return { id: uid(), from: effectivePivotId!, to: targetId,          type: 'spouse', subtype: 'biological', treeId }
+    return null
+  }
 
+  const commit = () => {
     setLoading(true)
+
+    if (linked) {
+      const rel = buildRel(linked.id)
+      if (rel) {
+        storeAddRel(rel)
+        persist(() => saveRelationship(rel), `${linked.name}'s relationship`)
+      }
+      setLoading(false)
+      onSuccess?.(linked.name)
+      close()
+      return
+    }
 
     const personId = uid()
     const newPerson: Person = {
@@ -90,38 +147,82 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
       deathDate:  null,
       photo:      null,
       location:   null,
+      occupation: null,
       story:      null,
-      treeId:     me.treeId,
+      treeId:     me!.treeId,
       deceased:   false,
     }
 
-    // parent edge: from = parent, to = child
-    let rel: Relationship | null = null
-    const treeId = me.treeId
-    if (relChoice === 'parent') {
-      rel = { id: uid(), from: personId,            to: effectivePivotId, type: 'parent', subtype: 'biological', treeId }
-    } else if (relChoice === 'child') {
-      rel = { id: uid(), from: effectivePivotId,    to: personId,         type: 'parent', subtype: 'biological', treeId }
-    } else if (relChoice === 'sibling') {
-      // Connect new person as child of pivot's first parent — engine derives sibling from shared parent
-      rel = { id: uid(), from: pivotParentIds[0],   to: personId,         type: 'parent', subtype: 'biological', treeId }
-    } else if (relChoice === 'spouse') {
-      rel = { id: uid(), from: effectivePivotId,    to: personId,         type: 'spouse', subtype: 'biological', treeId }
-    }
-
+    const rel = buildRel(personId)
     addPerson(newPerson)
     if (rel) storeAddRel(rel)
 
     // Optimistic UI; persist retries in the background and alerts on failure
-    const relToSave = rel
     persist(async () => {
       await saveMember(newPerson)
-      if (relToSave) await saveRelationship(relToSave)
+      if (rel) await saveRelationship(rel)
     }, newPerson.name)
 
     setLoading(false)
     onSuccess?.(name.trim())
     close()
+  }
+
+  const submit = () => {
+    setError('')
+    if (!name.trim()) { setError('Please enter a name.'); return }
+    if (!me || !effectivePivotId) { setError('No current user found.'); return }
+    if (relChoice === 'sibling' && !siblingAvailable) {
+      setError(`Add a parent first to connect siblings.`); return
+    }
+
+    // Linking an existing member — validate before writing any edge
+    if (linked) {
+      if (relChoice === 'parent') {
+        if (edgeExists(linked.id, effectivePivotId, 'parent')) {
+          setError(`${linked.name} is already ${pivotFirstName}'s parent.`); return
+        }
+        if (isDescendant(linked.id, effectivePivotId)) {
+          setError(`${linked.name} is a descendant of ${pivotFirstName} — that would loop the tree.`); return
+        }
+      } else if (relChoice === 'child') {
+        if (edgeExists(effectivePivotId, linked.id, 'parent')) {
+          setError(`${linked.name} is already ${pivotFirstName}'s child.`); return
+        }
+        if (isDescendant(effectivePivotId, linked.id)) {
+          setError(`${linked.name} is an ancestor of ${pivotFirstName} — that would loop the tree.`); return
+        }
+      } else if (relChoice === 'sibling') {
+        if (edgeExists(pivotParentIds[0], linked.id, 'parent')) {
+          setError(`${linked.name} and ${pivotFirstName} are already siblings.`); return
+        }
+      } else if (relChoice === 'spouse') {
+        if (edgeExists(effectivePivotId, linked.id, 'spouse')) {
+          setError(`${linked.name} is already ${pivotFirstName}'s spouse.`); return
+        }
+      }
+    }
+
+    // Adding a second mother/father is legal (step/adoptive) but usually a
+    // mistake — confirm before wiring it.
+    if (relChoice === 'parent') {
+      const g = linked ? linked.gender : gender
+      const clash = pivotParentIds.some(id => graph?.people[id]?.gender === g)
+      if (clash) {
+        const word = g === 'M' ? 'father' : g === 'F' ? 'mother' : 'parent'
+        Alert.alert(
+          `Add another ${word}?`,
+          `${pivotFirstName} already has a ${word} in the tree. Add ${(linked?.name ?? name).trim()} as an additional parent?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Add anyway', onPress: commit },
+          ],
+        )
+        return
+      }
+    }
+
+    commit()
   }
 
   return (
@@ -145,14 +246,41 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
                 <TextInput
                   style={s.input}
                   value={name}
-                  onChangeText={setName}
+                  onChangeText={t => { setName(t); if (linkedId) setLinkedId(null) }}
                   placeholder="e.g. Maria Santos"
                   placeholderTextColor={Colors.textMuted}
                   autoCapitalize="words"
                   autoComplete="name"
                 />
+                {suggestions.length > 0 && (
+                  <View style={s.suggestBox}>
+                    <Text style={s.suggestHeader}>Already in this tree — link instead:</Text>
+                    {suggestions.map(p => (
+                      <Pressable
+                        key={p.id}
+                        style={({ pressed }) => [s.suggestRow, pressed && s.pressed]}
+                        onPress={() => { setLinkedId(p.id); setName(p.name); setError('') }}
+                      >
+                        <Avatar name={p.name} photo={p.photo} size={28} />
+                        <Text style={s.suggestName} numberOfLines={1}>{p.name}</Text>
+                        <Text style={s.suggestLink}>Link</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+                {linked && (
+                  <View style={s.linkedChip}>
+                    <Text style={s.linkedText}>
+                      Linking {linked.name.split(' ')[0]} — no duplicate will be created
+                    </Text>
+                    <Pressable onPress={() => setLinkedId(null)} hitSlop={8}>
+                      <Text style={s.linkedClear}>✕</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
 
+              {!linked && (<>
               <View style={s.field}>
                 <Text style={s.label}>Birthday <Text style={s.optional}>(optional)</Text></Text>
                 <DatePickerField
@@ -178,6 +306,7 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
                   ))}
                 </View>
               </View>
+              </>)}
 
               <View style={s.field}>
                 <Text style={s.label}>Relationship to {pivotId ? pivotFirstName : 'you'}</Text>
@@ -211,7 +340,7 @@ export function AddMemberModal({ visible, onClose, onSuccess, pivotId }: AddMemb
               >
                 {loading
                   ? <ActivityIndicator color={Colors.cream} />
-                  : <Text style={s.btnText}>Add member</Text>}
+                  : <Text style={s.btnText}>{linked ? `Link ${linked.name.split(' ')[0]}` : 'Add member'}</Text>}
               </Pressable>
 
               <View style={{ height: Spacing.xxxl }} />
@@ -243,6 +372,14 @@ const s = StyleSheet.create({
   chipTextActive:  { color: Colors.cream },
   chipTextDisabled:{ color: Colors.textMuted },
   hint:            { ...Typography.bodySmall, color: Colors.textMuted, marginTop: Spacing.xs },
+  suggestBox:      { marginTop: Spacing.xs, backgroundColor: Colors.cream2, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, overflow: 'hidden' },
+  suggestHeader:   { ...Typography.caption, color: Colors.textMuted, paddingHorizontal: Spacing.md, paddingTop: Spacing.sm },
+  suggestRow:      { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  suggestName:     { ...Typography.body, color: Colors.textDark, flex: 1 },
+  suggestLink:     { ...Typography.label, color: Colors.amber },
+  linkedChip:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.xs, backgroundColor: Colors.cream2, borderWidth: 1, borderColor: Colors.amber, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  linkedText:      { ...Typography.bodySmall, color: Colors.textMid, flexShrink: 1 },
+  linkedClear:     { ...Typography.body, color: Colors.textMid, marginLeft: Spacing.sm },
   error:           { ...Typography.bodySmall, color: Colors.error, marginBottom: Spacing.md },
   btn:             { height: 52, backgroundColor: Colors.amber, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.sm },
   btnDisabled:     { opacity: 0.6 },

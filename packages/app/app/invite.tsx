@@ -8,6 +8,7 @@ import { loadTree, claimMember } from '../src/lib/db'
 import { savePendingInvite, clearPendingInvite } from '../src/lib/invite'
 import { useFamilyStore } from '../src/store/familyStore'
 import { Avatar } from '../src/components/Avatar'
+import { AddMemberModal } from '../src/components/AddMemberModal'
 import { Colors, Typography, Spacing, Radius } from '../src/theme'
 
 export default function InviteScreen() {
@@ -29,6 +30,12 @@ export default function InviteScreen() {
   const [authed,   setAuthed]   = useState<boolean | null>(null)
   const [claiming, setClaiming] = useState(false)
   const [error,    setError]    = useState('')
+  // Claim succeeded but the profile has no parents wired yet — prompt the
+  // invitee to link their family before they land in the tree, so their
+  // relationship labels come out right from day one.
+  const [claimedOk, setClaimedOk] = useState(false)
+  const [showAdd,   setShowAdd]   = useState(false)
+  const [linkedAny, setLinkedAny] = useState(false)
 
   useEffect(() => {
     if (!treeId) return
@@ -63,7 +70,15 @@ export default function InviteScreen() {
 
       loadGraph(graph, claimed.treeName ?? 'Family Tree', effectivePersonId)
       await clearPendingInvite()
-      router.replace('/(tabs)/')
+
+      const rels = Array.isArray(graph.relationships) ? graph.relationships : []
+      const hasParents = rels.some(r => r.type === 'parent' && r.to === effectivePersonId)
+      if (hasParents) {
+        router.replace('/(tabs)/')
+      } else {
+        setClaiming(false)
+        setClaimedOk(true)
+      }
     } catch (e: any) {
       const msg = String(e?.message ?? '')
       if (msg.includes('already_claimed')) {
@@ -92,6 +107,47 @@ export default function InviteScreen() {
     return (
       <SafeAreaView style={s.safe}>
         <ActivityIndicator color={Colors.amber} style={s.loader} />
+      </SafeAreaView>
+    )
+  }
+
+  // ── Claimed, but no parents wired — link family before entering the tree ──
+  if (claimedOk) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <View style={s.content}>
+          <View style={s.avatarLg}>
+            <Text style={s.avatarLgText}>{initial}</Text>
+          </View>
+          <Text style={s.heading}>You're in!</Text>
+          <Text style={s.body}>
+            Your profile isn't linked to any parents yet. Connecting them now —
+            from people already in the tree — makes every relationship label
+            come out right.
+          </Text>
+        </View>
+
+        <View style={s.footer}>
+          <Pressable
+            style={({ pressed }) => [s.btn, pressed && s.pressed]}
+            onPress={() => setShowAdd(true)}
+          >
+            <Text style={s.btnText}>{linkedAny ? 'Link another relative' : 'Link my parents'}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [s.outlineBtn, pressed && s.pressed]}
+            onPress={() => router.replace('/(tabs)/')}
+          >
+            <Text style={s.outlineBtnText}>{linkedAny ? 'Continue to my tree' : 'Skip for now'}</Text>
+          </Pressable>
+        </View>
+
+        <AddMemberModal
+          visible={showAdd}
+          onClose={() => setShowAdd(false)}
+          onSuccess={() => setLinkedAny(true)}
+          pivotId={effectivePersonId ?? undefined}
+        />
       </SafeAreaView>
     )
   }
